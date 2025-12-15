@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/> <!-- Violet -->
+      <stop offset="100%" stop-color="#db2777"/> <!-- Pink -->
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Full bleed background for Maskable Icon support -->
+  <rect width="512" height="512" fill="url(#grad)"/>
+  
+  <!-- Central Logo Icon (Safe Zone) -->
+  <g transform="translate(106, 106) scale(0.586)" filter="url(#shadow)">
+     <!-- Chat Bubble -->
+     <path fill="#ffffff" d="M256 32C114.6 32 0 125.1 0 240c0 49.6 21.4 95 57 130.7C44.5 421.1 2.7 466 2.2 466.5c-2.2 2.3-2.8 5.7-1.5 8.7S4.8 480 8 480c66.3 0 116-31.8 140.6-51.4 32.7 12.3 69 19.4 107.4 19.4 141.4 0 256-93.1 256-208S397.4 32 256 32z"/>
+     <!-- Sparkle/Heart symbol in bubble -->
+     <path fill="#db2777" d="M352.9 179.3c0-22.5-13.3-42.3-33-51.2-18.7-8.5-40.6-4.1-55.6 10.9L256 147.4l-8.3-8.3c-15-15-36.9-19.4-55.6-10.9-19.7 8.9-33 28.7-33 51.2 0 32.3 33.3 66.8 85.5 110.2 4.8 3.9 11.8 3.9 16.6 0 52.2-43.4 85.5-77.9 85.5-110.2z"/>
+  </g>
+</svg>
