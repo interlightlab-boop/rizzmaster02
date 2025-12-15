@@ -42,11 +42,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, on
   ];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-900 animate-in fade-in duration-700 relative">
+    <div className="h-full w-full flex flex-col items-center justify-center p-4 bg-slate-900 animate-in fade-in duration-700 relative overflow-y-auto pb-24">
       
       <button 
         onClick={onGoHome}
-        className="absolute top-6 left-6 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+        className="absolute top-6 left-6 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors z-10"
         aria-label="Home"
       >
         <Home className="w-6 h-6" />
@@ -54,13 +54,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, on
 
       <button 
         onClick={onOpenSettings}
-        className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"
+        className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors z-10"
       >
         <Settings className="w-6 h-6" />
       </button>
 
-      <div className="w-full max-w-md space-y-6 my-8">
-        <div className="text-center space-y-2">
+      <div className="w-full max-w-md space-y-6 my-8 min-h-full flex flex-col justify-center">
+        <div className="text-center space-y-2 mt-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-600 mb-2 shadow-xl shadow-purple-500/20">
             <Sparkles className="w-8 h-8 text-white" />
           </div>

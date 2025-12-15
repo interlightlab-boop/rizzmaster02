@@ -1,0 +1,63 @@
+
+import React from 'react';
+import { Share, PlusSquare, X, ArrowDown } from 'lucide-react';
+import { Language } from '../types';
+
+interface InstallGuideProps {
+  onClose: () => void;
+  language: Language;
+}
+
+export const InstallGuide: React.FC<InstallGuideProps> = ({ onClose, language }) => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  if (!isIOS) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-slate-900 border-t border-slate-700 w-full max-w-md p-6 rounded-t-3xl relative shadow-2xl animate-in slide-in-from-bottom-10 duration-500">
+        <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 rounded-full"
+        >
+            <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg border border-slate-700">
+                <img src="/pwa-192x192.png" alt="App Icon" className="w-full h-full rounded-2xl opacity-0" onError={(e) => {
+                    // Fallback visual if icon not found
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<svg class="w-8 h-8 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>';
+                }} />
+            </div>
+
+            <h3 className="text-xl font-bold text-white">
+                Install App on iPhone
+            </h3>
+            
+            <div className="space-y-4 w-full text-left bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                <div className="flex items-center gap-4">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-purple-400 font-bold text-sm shrink-0">1</span>
+                    <span className="text-sm text-slate-300 flex items-center gap-1">
+                        Tap the <Share className="w-4 h-4 mx-1 text-blue-400" /> <span className="font-bold text-white">Share</span> button
+                    </span>
+                </div>
+                <div className="w-px h-4 bg-slate-700 ml-4"></div>
+                <div className="flex items-center gap-4">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-purple-400 font-bold text-sm shrink-0">2</span>
+                    <span className="text-sm text-slate-300 flex items-center gap-1">
+                        Select <PlusSquare className="w-4 h-4 mx-1 text-white" /> <span className="font-bold text-white">Add to Home Screen</span>
+                    </span>
+                </div>
+            </div>
+            
+            <div className="text-xs text-slate-500 pt-2 flex items-center gap-2">
+                <ArrowDown className="w-4 h-4 animate-bounce" />
+                The Share button is usually at the bottom of Safari
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+};

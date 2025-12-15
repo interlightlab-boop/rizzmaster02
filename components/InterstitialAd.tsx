@@ -1,118 +1,102 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { BrainCircuit, LockKeyhole } from 'lucide-react';
 import { AdBanner } from './AdBanner';
 import { TRANSLATIONS } from '../constants/translations';
 import { Language } from '../types';
 
+// ==========================================
+// 💰 [사장님 필수 설정] 광고 단위 ID 입력란
+// ==========================================
+// 애드센스에서 "디스플레이 광고 - 사각형"을 만들고 받은 데이터 슬롯 ID
+const RECTANGLE_AD_SLOT_ID = "YOUR_MREC_SLOT_ID"; 
+// ==========================================
+
 interface InterstitialAdProps {
-  onClose: () => void;
+  onClose?: () => void;
+  onReward?: () => void;
   language: Language;
-  isResultReady: boolean; // Check if AI finished
+  mode: 'timer' | 'processing';
 }
 
-export const InterstitialAd: React.FC<InterstitialAdProps> = ({ onClose, language, isResultReady }) => {
-  // Use a random duration between 5 and 7 seconds
-  const [initialDuration] = useState(() => Math.floor(Math.random() * 3) + 5); 
-  const [countdown, setCountdown] = useState(initialDuration);
-  const [canClose, setCanClose] = useState(false);
+export const InterstitialAd: React.FC<InterstitialAdProps> = ({ onClose, onReward, language, mode }) => {
+  // CONFIG: 6 Seconds Duration (Revenue Sweet Spot)
+  const DURATION_MS = 6000; 
+  const UPDATE_INTERVAL = 50;
+
+  const [progress, setProgress] = useState(0);
   const t = TRANSLATIONS[language];
 
-  // Timer Logic
   useEffect(() => {
+    let elapsed = 0;
+    
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          setCanClose(true);
-          clearInterval(timer);
-          return 0;
+      elapsed += UPDATE_INTERVAL;
+      const newProgress = Math.min((elapsed / DURATION_MS) * 100, 100);
+      setProgress(newProgress);
+
+      if (elapsed >= DURATION_MS) {
+        clearInterval(timer);
+        if (mode === 'timer') {
+            if (onReward) onReward();
+            if (onClose) onClose();
         }
-        return prev - 1;
-      });
-    }, 1000);
+      }
+    }, UPDATE_INTERVAL);
 
     return () => clearInterval(timer);
-  }, []);
-
-  // Smart Auto-Pass Logic
-  useEffect(() => {
-    // If countdown passed AND result is ready, close automatically (Seamless UX)
-    if (canClose && isResultReady) {
-      onClose();
-    }
-  }, [canClose, isResultReady, onClose]);
+  }, [mode, onReward, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
-      
-      {/* Top Right Close Button - Force High Z-Index */}
-      <div 
-          onClick={canClose ? onClose : undefined}
-          className={`
-            absolute top-6 right-6 z-[999] p-3 rounded-full border transition-all duration-300
-            ${canClose 
-                ? 'opacity-100 cursor-pointer bg-white/20 text-white border-white/30 hover:bg-white/30 hover:scale-110' 
-                : 'opacity-0 pointer-events-none scale-90'}
-          `}
-      >
-          <X className="w-6 h-6 drop-shadow-md" />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex flex-col items-center gap-6 p-6 w-full max-w-sm relative z-[105]">
+    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900 animate-in fade-in duration-300">
+      <div className="flex flex-col items-center gap-6 p-6 w-full max-w-sm relative z-[205]">
         
-        {/* Status Text */}
-        <div className="text-center space-y-4 animate-in slide-in-from-bottom-5 duration-700">
-            <h2 className="text-2xl font-bold text-white flex flex-col items-center gap-3">
-                 <div className="relative">
-                    <div className="absolute inset-0 bg-purple-500 blur-xl opacity-40 animate-pulse"></div>
-                    <div className="relative bg-slate-900 rounded-2xl p-3 border border-slate-700 shadow-xl">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-                    </div>
-                 </div>
-                 <span className="bg-gradient-to-r from-purple-200 to-white bg-clip-text text-transparent">
-                    {t.analyzing_btn}
-                 </span>
-            </h2>
-             {!canClose && (
-                <div className="flex items-center gap-2 justify-center text-sm text-slate-400 font-medium bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
-                    <span>Ad helps keep RizzMaster free</span>
-                    <span className="text-purple-400 font-bold border-l border-slate-700 pl-2">{countdown}s</span>
-                </div>
-            )}
-            {canClose && !isResultReady && (
-                <p className="text-sm text-slate-400 animate-pulse">
-                    Finalizing results...
+        <div className="text-center space-y-3 animate-in slide-in-from-bottom-5 duration-700">
+            <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto relative">
+                <div className="absolute inset-0 rounded-full border-t-2 border-purple-500 animate-spin"></div>
+                {mode === 'processing' ? (
+                     <BrainCircuit className="w-8 h-8 text-purple-400 animate-pulse" />
+                ) : (
+                     <LockKeyhole className="w-8 h-8 text-purple-400 animate-pulse" />
+                )}
+            </div>
+            <div>
+                <h2 className="text-xl font-bold text-white">
+                    {mode === 'processing' ? (t.analyzing_btn || "Analyzing...") : "Unlocking..."}
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                    {mode === 'processing' 
+                        ? "Calculating psychological vectors..." 
+                        : "Preparing your premium response..."}
                 </p>
-            )}
+            </div>
         </div>
 
-        {/* Ad Card - The Money Maker */}
-        <div className="relative bg-slate-800 p-1 rounded-3xl shadow-2xl border border-slate-700 w-full flex flex-col items-center overflow-hidden">
-             
-             {/* Timer Progress Bar (Top of card) */}
-             {!canClose && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-slate-700 z-10">
-                    <div 
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000 ease-linear" 
-                        style={{ width: `${((initialDuration - countdown) / initialDuration) * 100}%` }}
+        <div className="w-full flex flex-col items-center gap-2">
+            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                Sponsored Support
+            </div>
+            
+            <div className="relative bg-slate-800 p-1 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+                <div className="bg-black w-[300px] h-[250px] rounded-xl overflow-hidden flex items-center justify-center">
+                    {/* 여기에 위에서 설정한 ID가 들어갑니다 */}
+                    <AdBanner 
+                        format="rectangle" 
+                        slotId={RECTANGLE_AD_SLOT_ID}
+                        style={{ width: '300px', height: '250px' }}
                     />
                 </div>
-             )}
-
-             {/* The Ad Container (Fixed MREC Size for High CPM) */}
-             <div className="bg-black w-full h-[250px] rounded-[1.2rem] overflow-hidden flex items-center justify-center">
-                <AdBanner 
-                    format="rectangle" 
-                    slotId="INTERSTITIAL_SLOT_ID"
-                    style={{ width: '300px', height: '250px' }}
-                />
-             </div>
-        </div>
-        
-        <div className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
-            Sponsored Content
+            </div>
         </div>
 
+        <div className="w-full max-w-[240px] space-y-2">
+            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                <div 
+                    className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 bg-[length:200%_100%] animate-[shimmer_2s_infinite] transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                    style={{ width: `${progress}%` }}
+                ></div>
+            </div>
+        </div>
       </div>
     </div>
   );

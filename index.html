@@ -1,21 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="description" content="RizzMaster AI is the ultimate AI dating wingman. Upload chat screenshots to get instant, psychologically proven replies based on MBTI and social dynamics.">
-    <meta name="keywords" content="Rizz App, AI Dating Assistant, Rizz AI, Dating Wingman, MBTI Dating, Chat Helper, Tinder Rizz, Hinge Opener">
-    <title>RizzMaster AI - Your Dating Wingman</title>
+    <meta name="description" content="MBTI Rizz AI (mbtirizz.com) is the ultimate AI dating wingman. Upload chat screenshots to get instant, psychologically proven replies based on MBTI and social dynamics.">
+    <meta name="keywords" content="MBTI Rizz, MBTI Dating, Rizz App, AI Dating Assistant, Rizz AI, Dating Wingman, Chat Helper, Tinder Rizz, Hinge Opener">
+    <title>MBTI Rizz AI - Your Dating Wingman</title>
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUml6ek1hc3RlciIsImNob3J0X25hbWUiOiJSaXp6TWFzdGVyIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBmMTcyYSIsInRoZW1lX2NvbG9yIjoiIzBmMTcyYSIsImljb25zIjpbeyJzcmMiOiJodHRwczovL2ZpbGUuYWlzdHVkaW8uZ29vZ2xlLmNvbS9hcGkvaW1hZ2UvRmlsZTpmaWxlXzZtN3h5OEhGMlJad1pXdmYiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
-
-    <!-- Google AdSense (Replace ca-pub-XXXXXXXXXXXXXXXX with your actual Publisher ID) -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTUJUSSBSaXp6IEFJIiwiY2hvcnRfbmFtZSI6Ik1CVGkgUml6eiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwZjE3MmEiLCJ0aGVtZV9jb2xvciI6IiMwZjE3MmEiLCJpY29ucyI6W3sic3JjIjoiaHR0cHM6Ly9maWxlLmFpc3R1ZGlvLmdvb2dsZS5jb20vYXBpL2ltYWdlL0ZpbGU6ZmlsZV82bTd4eThIRjJSWndaV3ZmIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJdfQ==">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -33,10 +31,22 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
       }
-      body {
+      
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent body scroll */
         background-color: #0f172a; /* Slate 900 */
         color: #f8fafc;
+        touch-action: pan-x pan-y;
         overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
+      }
+      
+      #root {
+        height: 100%;
+        width: 100%;
       }
     </style>
   <script type="importmap">
@@ -61,8 +71,8 @@
     
     <noscript>
         <div style="padding: 20px; font-family: sans-serif; color: #ddd;">
-            <h1>RizzMaster AI - The Ultimate Dating Assistant</h1>
-            <p>RizzMaster AI helps you generate the perfect reply for your crush, partner, or dating match using advanced artificial intelligence.</p>
+            <h1>MBTI Rizz AI - The Ultimate Dating Assistant</h1>
+            <p>MBTI Rizz AI helps you generate the perfect reply for your crush, partner, or dating match using advanced artificial intelligence.</p>
             <h2>How it works</h2>
             <p>Simply upload a screenshot of your chat from Tinder, Hinge, WhatsApp, or Instagram. Our AI analyzes the conversation context, mood, and partner's personality.</p>
             <h2>Features</h2>
@@ -71,7 +81,7 @@
                 <li><strong>MBTI Compatibility:</strong> Our engine uses Myers-Briggs Type Indicator psychology to tailor responses.</li>
                 <li><strong>Multilingual Support:</strong> Works in English, Korean, Japanese, Spanish, French, and more.</li>
             </ul>
-            <p>Stop sending boring texts. Get RizzMaster AI today.</p>
+            <p>Stop sending boring texts. Get MBTI Rizz AI today at mbtirizz.com.</p>
         </div>
     </noscript>
   </body>

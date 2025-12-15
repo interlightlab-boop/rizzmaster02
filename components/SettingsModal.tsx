@@ -1,5 +1,6 @@
-import React from 'react';
-import { X, Globe, Shield, FileText, Trash2, Mail, Download } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { X, Globe, Shield, FileText, Trash2, Mail, Download, Code, Check, Clock, Share2, Zap } from 'lucide-react';
 import { Language } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 
@@ -12,6 +13,10 @@ interface SettingsModalProps {
   installPrompt?: any;
   onInstallApp?: () => void;
   onOpenLegal: (type: 'privacy' | 'terms') => void;
+  isPro: boolean;
+  onTogglePro: () => void;
+  proExpiry?: number;
+  proType?: 'none' | 'share' | 'subscription' | 'ad_reward';
 }
 
 // Order based on Ad Revenue (CPM) & User Base Size
@@ -34,8 +39,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetData,
   installPrompt,
   onInstallApp,
-  onOpenLegal
+  onOpenLegal,
+  isPro,
+  onTogglePro,
+  proExpiry = 0,
+  proType = 'none'
 }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    if (!isPro || !proExpiry) return;
+
+    const updateTimer = () => {
+        const now = Date.now();
+        const diff = proExpiry - now;
+        
+        if (diff <= 0) {
+            setTimeLeft('Expired');
+            return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (days > 0) {
+            setTimeLeft(`${days}d ${hours}h left`);
+        } else if (hours > 0) {
+            setTimeLeft(`${hours}h ${minutes}m left`);
+        } else {
+            setTimeLeft(`${minutes}m ${seconds}s left`);
+        }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [isPro, proExpiry]);
+
   if (!isOpen) return null;
 
   const t = TRANSLATIONS[currentLanguage];
@@ -61,6 +103,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           
+          {/* Pro Status Badge */}
+          {isPro && (
+              <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-500/30 p-4 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg ${proType === 'share' ? 'bg-blue-500' : 'bg-gradient-to-br from-purple-500 to-pink-500'}`}>
+                          {proType === 'share' ? <Share2 className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                      </div>
+                      <div>
+                          <h4 className="font-bold text-white text-sm">
+                             {proType === 'share' ? 'Free Premium (Share)' : 'Unlimited Pro'}
+                          </h4>
+                          <p className="text-xs text-purple-200">{timeLeft}</p>
+                      </div>
+                  </div>
+              </div>
+          )}
+
           {/* PWA Install Button (Only if available) */}
           {installPrompt && onInstallApp && (
              <div className="mb-4">
@@ -114,7 +173,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button onClick={() => onOpenLegal('terms')} className="w-full flex items-center justify-between p-3 bg-slate-800 rounded-xl hover:bg-slate-750 text-slate-300 hover:text-white transition-colors">
                  <span className="flex items-center gap-2 text-sm"><FileText className="w-4 h-4" /> {t.terms_of_service}</span>
               </button>
-              <a href="mailto:support@rizzmaster.ai" className="flex items-center justify-between p-3 bg-slate-800 rounded-xl hover:bg-slate-750 text-slate-300 hover:text-white transition-colors">
+              <a href="mailto:interlightlab@gmail.com" className="flex items-center justify-between p-3 bg-slate-800 rounded-xl hover:bg-slate-750 text-slate-300 hover:text-white transition-colors">
                  <span className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4" /> {t.contact_support}</span>
               </a>
             </div>
@@ -124,6 +183,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <hr className="border-slate-800" />
+
+          {/* Developer Tools */}
+          <div>
+             <h3 className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider flex items-center gap-2">
+               <Code className="w-3 h-3" /> Developer Tools
+             </h3>
+             <button
+               onClick={onTogglePro}
+               className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isPro ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+             >
+                <div className="flex flex-col items-start">
+                    <span className="text-sm font-bold">Test Pro Mode (Sub)</span>
+                    <span className="text-[10px] opacity-70">Simulates Paid Subscription</span>
+                </div>
+                {isPro ? <div className="flex items-center gap-1 text-xs font-bold bg-green-500/20 px-2 py-1 rounded"><Check className="w-3 h-3" /> ACTIVE</div> : <span className="text-xs">INACTIVE</span>}
+             </button>
+          </div>
+
+          <div className="h-4"></div>
 
           {/* Danger Zone */}
           <button 

@@ -4,13 +4,16 @@ import { PartnerProfile, UserProfile, RizzResponse, Language } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 import { generateRizzSuggestions } from '../services/geminiService';
 import { Button } from './Button';
-import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Loader2, Settings, Globe, Sparkles, Home, Lock, Download, X } from 'lucide-react';
 import { InterstitialAd } from './InterstitialAd';
+import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X } from 'lucide-react';
 
 interface AnalyzerProps {
   user: UserProfile;
   partner: PartnerProfile;
   isPro: boolean;
+  proType: 'none' | 'share' | 'subscription' | 'ad_reward'; 
+  oneTimePass: boolean; 
+  onConsumeOneTimePass: () => void; 
   onBack: () => void;
   onShowPaywall: () => void;
   language: Language;
@@ -20,25 +23,38 @@ interface AnalyzerProps {
   onInstallApp?: () => void;
 }
 
+// ==================================================================================
+// 🚨 [사장님 필독] 심사 통과 후 수익화 모드 전환 방법
+// ==================================================================================
+// 1. 현재 상태 (TRUE): [심사 제출용] 광고 없음, 기능 100% 무료, 심사관이 좋아함.
+// 2. 심사 통과 후: 아래 값을 false로 바꾸고 배포하세요.
+// 3. 변경 후 (FALSE): [돈 버는 모드] 광고 나옴, 프리미엄 기능 잠김.
+// ==================================================================================
+const IS_REVIEW_MODE = true; 
+// ==================================================================================
+
 export const Analyzer: React.FC<AnalyzerProps> = ({ 
-  user, partner, isPro, onBack, language, onOpenSettings, onGoHome, onShowPaywall, installPrompt, onInstallApp
+  user, partner, isPro, proType, oneTimePass, onConsumeOneTimePass, onBack, language, onOpenSettings, onGoHome, onShowPaywall, installPrompt, onInstallApp
 }) => {
   const t = TRANSLATIONS[language];
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [mimeType] = useState<string>('image/jpeg');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showInterstitial, setShowInterstitial] = useState(false);
   const [results, setResults] = useState<RizzResponse[] | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  
+  // State for the Fake Loading Screen
+  const [showFakeLoading, setShowFakeLoading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (results && installPrompt && !showInterstitial) {
+    if (results && installPrompt) {
         const timer = setTimeout(() => setShowInstallBanner(true), 2000);
         return () => clearTimeout(timer);
     }
-  }, [results, installPrompt, showInterstitial]);
+  }, [results, installPrompt]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,16 +82,55 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   const handleAnalyze = async () => {
     if (!selectedImage) return;
-    setIsAnalyzing(true); setResults(null); 
-    if (!isPro) setShowInterstitial(true); 
+
+    // --- LOADING & REVENUE LOGIC ---
+    
+    // Check if user is a paid subscriber (Unlimited Pro)
+    const isSubscriber = isPro && proType === 'subscription';
+    
+    // Determine if we should show the "Fake Loading / Ad Screen"
+    // Condition 1: Must NOT be in Review Mode (Money Making Mode active)
+    // Condition 2: Must NOT be a paid subscriber
+    const shouldShowAdLoading = !IS_REVIEW_MODE && !isSubscriber;
+    
+    if (shouldShowAdLoading) {
+        setShowFakeLoading(true);
+    }
+    
+    setIsAnalyzing(true); 
+    setResults(null); 
+    
     try {
-      const result = await generateRizzSuggestions(user, partner, selectedImage, mimeType, language);
+      // Logic:
+      // If we are showing the ad screen, wait 6 seconds (6000ms).
+      // If we are in Review Mode OR it's a paid user, 0ms delay.
+      const waitTime = shouldShowAdLoading ? 6000 : 0; 
+      
+      const minWaitPromise = new Promise(resolve => setTimeout(resolve, waitTime));
+      const apiPromise = generateRizzSuggestions(user, partner, selectedImage, mimeType, language);
+
+      const [_, result] = await Promise.all([minWaitPromise, apiPromise]);
+      
       setResults(result.replies);
     } catch (error: any) {
       console.error(error);
-      alert(`${error.message}\n\nEnvironment settings mismatch detected.`);
-      setShowInterstitial(false); 
-    } finally { setIsAnalyzing(false); }
+      alert(`${error.message}`);
+    } finally { 
+        setShowFakeLoading(false);
+        setIsAnalyzing(false); 
+    }
+  };
+
+  const handleTryAgain = () => {
+      setResults(null);
+      // Revoke pass when starting over
+      if (oneTimePass) onConsumeOneTimePass(); 
+  };
+
+  const handleBack = () => {
+      // Revoke pass when leaving
+      if (oneTimePass) onConsumeOneTimePass();
+      onBack();
   };
 
   const handleCopy = (text: string, index: number) => {
@@ -84,24 +139,45 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     setTimeout(() => setCopiedIndex(null), 3000);
   };
 
+  const shouldShowTranslation = (res: RizzResponse) => {
+      if (language === partner.language) return false;
+      if (!res.translation) return false;
+      if (res.translation.trim() === '') return false;
+      if (res.translation.toLowerCase() === 'null') return false;
+      if (res.translation === res.text) return false;
+      return true;
+  };
+
   return (
-    <div className="min-h-screen flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
-      {showInterstitial && <InterstitialAd onClose={() => setShowInterstitial(false)} language={language} isResultReady={results !== null} />}
+    <div className="h-full w-full flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
       
-      <div className="flex items-center justify-between mb-6">
-        <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft /></button>
+      {/* Fake Loading Overlay (Ads + Analyzing UI) */}
+      {showFakeLoading && (
+          <InterstitialAd 
+            language={language}
+            mode="processing"
+          />
+      )}
+
+      <div className="flex items-center justify-between mb-6 shrink-0">
+        <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft /></button>
         <div className="flex items-center gap-2">
-            {isPro && <div className="px-3 py-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full text-xs font-bold text-white shadow-lg shadow-orange-500/30 border border-yellow-500/50 flex items-center gap-1"><Sparkles className="w-3 h-3" /> PRO</div>}
+            {(isPro || oneTimePass || IS_REVIEW_MODE) && (
+                <div className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border flex items-center gap-1 ${proType === 'subscription' ? 'bg-gradient-to-r from-yellow-600 to-orange-600 border-yellow-500/50 shadow-orange-500/30' : 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/50 shadow-cyan-500/30'}`}>
+                    <Sparkles className="w-3 h-3" /> 
+                    {IS_REVIEW_MODE ? "REVIEW MODE" : (proType === 'subscription' ? "PRO" : (isPro ? "PRO (1H)" : "UNLOCKED"))}
+                </div>
+            )}
             <button onClick={onGoHome} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"><Home className="w-5 h-5" /></button>
             <button onClick={onOpenSettings} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"><Settings className="w-5 h-5" /></button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-24">
          <div className="flex items-center bg-slate-800/60 p-3 rounded-xl mb-6 border border-slate-700/50 backdrop-blur-sm shadow-inner">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-violet-600 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/20">{partner.name.charAt(0).toUpperCase()}</div>
             <div className="ml-3 flex-1"><div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t.talking_to}</div><div className="font-bold text-slate-100">{partner.name}</div></div>
-            <button onClick={onBack} className="text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition-colors">{t.change_partner}</button>
+            <button onClick={handleBack} className="text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition-colors">{t.change_partner}</button>
          </div>
 
         {!results && (
@@ -111,11 +187,15 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 {selectedImage ? <><img src={`data:${mimeType};base64,${selectedImage}`} alt="Preview" className="max-h-64 rounded-lg shadow-lg object-contain transition-transform group-hover:scale-[1.02]" /><div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-lg border border-white/10">{t.change_img}</div></> : <><div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:scale-110 group-hover:bg-slate-750 transition-all"><ImageIcon className="w-10 h-10 text-slate-400 group-hover:text-purple-400 transition-colors" /></div><span className="text-slate-300 font-medium mt-4 tracking-wide">{t.tap_upload}</span></>}
             </div>
-            <Button onClick={handleAnalyze} disabled={!selectedImage || isAnalyzing} fullWidth>{isAnalyzing ? <Loader2 className="animate-spin w-5 h-5" /> : t.analyze_btn}</Button>
+            
+            {/* The Main Analyze Button */}
+            <Button onClick={handleAnalyze} disabled={!selectedImage || isAnalyzing} fullWidth>
+                {t.analyze_btn}
+            </Button>
           </div>
         )}
 
-        {results && !showInterstitial && (
+        {results && (
             <div className="space-y-6 animate-in slide-in-from-bottom-10 duration-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-black bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">{t.results_title}</h2>
@@ -123,7 +203,10 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 </div>
                 <div className="space-y-4">
                     {results.map((res, idx) => {
-                        const isLocked = !isPro && idx === 2;
+                        // UNLOCK LOGIC:
+                        // If IS_REVIEW_MODE is true, nothing is locked.
+                        const isLocked = !IS_REVIEW_MODE && (!isPro && !oneTimePass) && idx === 2;
+                        
                         return (
                             <div key={idx} onClick={() => isLocked ? onShowPaywall() : handleCopy(res.text, idx)} className={`relative border rounded-2xl p-5 transition-all overflow-hidden ${isLocked ? 'bg-slate-900 border-yellow-500/40 cursor-pointer shadow-2xl shadow-yellow-900/10 hover:border-yellow-400' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}`}>
                                 {isLocked && (
@@ -135,18 +218,26 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                                         <span className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{t.tap_to_reveal}</span>
                                     </div>
                                 )}
-                                <div className={`flex justify-between items-start mb-2 ${isLocked ? 'blur-md opacity-30' : ''}`}>
+                                <div className={`flex justify-between items-start mb-3 ${isLocked ? 'blur-md opacity-30' : ''}`}>
                                     <span className={`px-2 py-1 text-[10px] font-black uppercase rounded tracking-[0.1em] ${isLocked ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'}`}>{res.tone}</span>
                                     {!isLocked && (copiedIndex === idx ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : <Copy className="w-4 h-4 text-slate-500 hover:text-white transition-colors cursor-pointer" />)}
                                 </div>
-                                <p className={`text-lg font-medium text-white mb-2 ${isLocked ? 'blur-md select-none' : ''}`}>"{res.text}"</p>
-                                {res.translation && <div className={`mb-3 px-3 py-2 bg-slate-700/30 rounded-lg flex items-start border border-slate-700/50 ${isLocked ? 'blur-md select-none' : ''}`}><Globe className="w-3 h-3 text-slate-400 mt-1 shrink-0" /><p className="text-sm text-slate-300 ml-2 italic">"{res.translation}"</p></div>}
-                                <p className={`text-xs text-slate-400 pt-2 border-t border-slate-700/50 leading-relaxed ${isLocked ? 'blur-md select-none' : ''}`}>💡 {res.explanation}</p>
+                                
+                                <p className={`text-lg leading-relaxed font-medium text-white mb-3 ${isLocked ? 'blur-md select-none' : ''}`}>"{res.text}"</p>
+                                
+                                {shouldShowTranslation(res) && (
+                                    <div className={`mb-4 px-3 py-3 bg-slate-700/30 rounded-lg flex items-start border border-slate-700/50 ${isLocked ? 'blur-md select-none' : ''}`}>
+                                        <Globe className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                                        <p className="text-sm text-slate-300 ml-3 italic leading-relaxed">"{res.translation}"</p>
+                                    </div>
+                                )}
+                                
+                                <p className={`text-xs text-slate-400 pt-3 border-t border-slate-700/50 leading-relaxed ${isLocked ? 'blur-md select-none' : ''}`}>💡 {res.explanation}</p>
                             </div>
                         );
                     })}
                 </div>
-                <Button variant="secondary" fullWidth onClick={() => setResults(null)}>{t.try_another}</Button>
+                <Button variant="secondary" fullWidth onClick={handleTryAgain}>{t.try_another}</Button>
             </div>
         )}
       </div>

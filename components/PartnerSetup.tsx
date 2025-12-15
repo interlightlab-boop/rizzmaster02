@@ -45,15 +45,17 @@ const politenessOptions = (t: any) => [
 export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, language, onOpenSettings, isPro, onShowPaywall, onGoHome }) => {
   const t = TRANSLATIONS[language];
   const [savedPartners, setSavedPartners] = useState<PartnerProfile[]>([]);
+  
+  // Initialize MBTI as null (using 'as any' to bypass strict type for the initial unselected state)
   const [formData, setFormData] = useState<PartnerProfile>({
     id: '',
     name: '',
     gender: Gender.Female,
     age: 25,
     relation: 'Stranger', 
-    mbti: MBTI.Unknown,
-    goal: 'Casual', // Default to non-locked
-    vibe: 'Witty',  // Default to non-locked
+    mbti: null as any, // Start with no selection
+    goal: 'Casual', 
+    vibe: 'Witty',  
     context: '',
     language: language,
     politeness: 'Casual'
@@ -88,9 +90,13 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Default to Unknown if user selected nothing
+    const finalMBTI = formData.mbti || MBTI.Unknown;
+    
     const finalData = {
         ...formData,
-        id: formData.id || Date.now().toString()
+        id: formData.id || Date.now().toString(),
+        mbti: finalMBTI
     };
     savePartnerToStorage(finalData);
     onNext(finalData);
@@ -112,7 +118,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
         gender: Gender.Female,
         age: 25,
         relation: 'Stranger', 
-        mbti: MBTI.Unknown,
+        mbti: null as any, // Reset to no selection
         goal: 'Casual',
         vibe: 'Witty',
         context: '',
@@ -167,8 +173,8 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
   ];
 
   return (
-    <div className="min-h-screen flex flex-col p-4 max-w-md mx-auto animate-in slide-in-from-right duration-500">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full w-full flex flex-col p-4 max-w-md mx-auto animate-in slide-in-from-right duration-500">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center">
             <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white">
             <ArrowLeft />
@@ -193,7 +199,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 shrink-0">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">{t.saved_partners}</h3>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <button 
@@ -229,7 +235,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pb-6">
+      <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pb-24">
         <div className="bg-slate-800/50 p-5 rounded-3xl border border-slate-700/50 space-y-4 backdrop-blur-sm">
            <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-purple-500/10 rounded-lg">
@@ -306,8 +312,9 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
             <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-400 ml-1 flex justify-between">
                     <span>{t.their_mbti}</span>
-                    <span className={`text-xs font-bold ${formData.mbti === MBTI.Unknown ? 'text-slate-400' : 'text-cyan-400'}`}>
-                        {formData.mbti === MBTI.Unknown ? 'Unknown' : formData.mbti}
+                    {/* Display logic: Show 'Not Selected' (gray) if null, 'Unknown' (Cyan) if selected unknown, or the specific MBTI (Purple) */}
+                    <span className={`text-xs font-bold ${!formData.mbti ? 'text-slate-500' : (formData.mbti === MBTI.Unknown ? 'text-cyan-400' : 'text-purple-400')}`}>
+                        {!formData.mbti ? t.mbti_unknown : (formData.mbti === MBTI.Unknown ? 'Unknown' : formData.mbti)}
                     </span>
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -337,7 +344,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
                     className={`
                         w-full h-9 rounded-md text-xs font-bold transition-all border flex items-center justify-center gap-2
                         ${formData.mbti === MBTI.Unknown
-                            ? 'bg-slate-600 text-white border-slate-500 scale-105 shadow-md' 
+                            ? 'bg-cyan-600 text-white border-cyan-400 scale-105 shadow-lg shadow-cyan-900/20' 
                             : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}
                     `}
                 >

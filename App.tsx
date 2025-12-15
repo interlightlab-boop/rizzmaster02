@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, PartnerProfile, Language } from './types';
 import { Onboarding } from './components/Onboarding';
@@ -6,13 +7,17 @@ import { Analyzer } from './components/Analyzer';
 import { Paywall } from './components/Paywall';
 import { LanguageSelector } from './components/LanguageSelector';
 import { SettingsModal } from './components/SettingsModal';
-import { AdBanner } from './components/AdBanner';
 import { LegalDocs } from './components/LegalDocs';
+import { InstallGuide } from './components/InstallGuide';
+import { CookieConsent } from './components/CookieConsent';
+import { InterstitialAd } from './components/InterstitialAd';
 
 const STORAGE_KEY_USER = 'rizz_user_profile';
 const STORAGE_KEY_PRO_EXPIRY = 'rizz_pro_expiry';
-const STORAGE_KEY_PREMIUM = 'rizz_is_premium';
+const STORAGE_KEY_PRO_TYPE = 'rizz_pro_type';
 const STORAGE_KEY_LANG = 'rizz_language';
+
+type ProType = 'none' | 'share' | 'subscription' | 'ad_reward';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<'language' | 'onboarding' | 'partner' | 'analyzer'>('language');
@@ -20,19 +25,32 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null);
   
+  // --- PRO STATUS STATE ---
+  // 1. Time-based Pro (Subscription or Share)
   const [proExpiry, setProExpiry] = useState<number>(0); 
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(false); 
+  const [proType, setProType] = useState<ProType>('none');
+  const [now, setNow] = useState<number>(Date.now()); 
   
+  // 2. One-Time Pass (Ad Reward) - strictly for ONE analysis result unlock
+  const [oneTimePass, setOneTimePass] = useState<boolean>(false);
+
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
+  const [showAdOverlay, setShowAdOverlay] = useState<boolean>(false); // For Watch Ad option
+
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  
   const [showLegal, setShowLegal] = useState<boolean>(false);
   const [legalDocType, setLegalDocType] = useState<'privacy' | 'terms'>('privacy');
-
-  const isPro = isSubscribed || (proExpiry > Date.now());
+  
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showIOSInstall, setShowIOSInstall] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
+  // Derived Pro Status: strictly based on current time vs expiry time
+  const isPro = proExpiry > now;
+  
   useEffect(() => {
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault(); 
       setDeferredPrompt(e);
@@ -51,16 +69,48 @@ const App: React.FC = () => {
         }
     }
 
-    const savedPremium = localStorage.getItem(STORAGE_KEY_PREMIUM);
-    if (savedPremium === 'true') setIsSubscribed(true);
-
+    // Load Pro Expiry
     const savedExpiry = localStorage.getItem(STORAGE_KEY_PRO_EXPIRY);
-    if (savedExpiry) setProExpiry(parseInt(savedExpiry));
+    const savedType = localStorage.getItem(STORAGE_KEY_PRO_TYPE) as ProType;
+    
+    if (savedExpiry) {
+        const expiryTime = parseInt(savedExpiry);
+        if (expiryTime > Date.now()) {
+            setProExpiry(expiryTime);
+            setProType(savedType || 'none');
+        } else {
+            localStorage.removeItem(STORAGE_KEY_PRO_EXPIRY);
+            localStorage.removeItem(STORAGE_KEY_PRO_TYPE);
+            setProExpiry(0);
+            setProType('none');
+        }
+    }
+
+    // Check Payment Success
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+        grantTimeBasedReward('subscription', 30 * 24 * 60 * 60 * 1000); // 30 Days
+        window.history.replaceState({}, document.title, window.location.pathname);
+        alert("🎉 Thank you! Pro access activated.");
+    }
+
+    // Timer Tick
+    const tick = setInterval(() => {
+        const currentTime = Date.now();
+        setNow(currentTime);
+        if (proExpiry > 0 && currentTime > proExpiry) {
+            setProExpiry(0);
+            setProType('none');
+            localStorage.removeItem(STORAGE_KEY_PRO_EXPIRY);
+            localStorage.removeItem(STORAGE_KEY_PRO_TYPE);
+        }
+    }, 1000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearInterval(tick);
     };
-  }, []);
+  }, [proExpiry]);
 
   const handleLanguageSelect = (lang: Language) => {
     setLanguage(lang);
@@ -81,41 +131,81 @@ const App: React.FC = () => {
     setScreen('analyzer');
   };
 
+  // --- REWARD LOGIC ---
+
+  // 1. Grant Time-Based Reward (Share/Sub)
+  const grantTimeBasedReward = (type: ProType, durationMs: number) => {
+      const newExpiry = Date.now() + durationMs;
+      setProExpiry(newExpiry);
+      setProType(type);
+      localStorage.setItem(STORAGE_KEY_PRO_EXPIRY, newExpiry.toString());
+      localStorage.setItem(STORAGE_KEY_PRO_TYPE, type);
+      setShowPaywall(false);
+      // Reset one-time pass since they are now Pro
+      setOneTimePass(false);
+  };
+
   const handleShareReward = async () => {
     const shareData = {
-        title: 'RizzMaster AI',
-        text: 'Check out this AI Wingman! It writes the perfect replies.',
-        url: window.location.href
+        title: 'MBTI Rizz AI',
+        text: 'Check out this AI Wingman! It writes the perfect replies based on MBTI.',
+        url: 'https://mbtirizz.com'
     };
-    try {
-        if (navigator.share) {
+    
+    // Grant 1 Hour
+    const grantDuration = 60 * 60 * 1000; 
+
+    if (navigator.share && navigator.canShare(shareData)) {
+        try {
             await navigator.share(shareData);
-            const newExpiry = Date.now() + 3600000; // 1 hour exactly
-            setProExpiry(newExpiry);
-            localStorage.setItem(STORAGE_KEY_PRO_EXPIRY, newExpiry.toString());
-            setShowPaywall(false);
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Link copied! Share it to unlock rewards.");
-            const newExpiry = Date.now() + 3600000; 
-            setProExpiry(newExpiry);
-            localStorage.setItem(STORAGE_KEY_PRO_EXPIRY, newExpiry.toString());
-            setShowPaywall(false);
+            grantTimeBasedReward('share', grantDuration);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') console.error(err);
         }
-    } catch (err) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(shareData.url);
+            alert("Link copied! Share it with a friend to unlock.");
+            grantTimeBasedReward('share', grantDuration);
+        } catch (err) {
+            console.error(err);
+        }
+    }
   };
 
   const handleSubscribe = () => {
-    setIsSubscribed(true);
-    localStorage.setItem(STORAGE_KEY_PREMIUM, 'true');
-    setShowPaywall(false);
+    // In a real app, this redirects to Stripe/Payment
+    grantTimeBasedReward('subscription', 30 * 24 * 60 * 60 * 1000);
   };
 
-  const handleInstallApp = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
+  // 2. Grant One-Time Pass (Ad/Fake Loading)
+  // Kept logic but removed UI trigger from Paywall to be safe
+  const handleAdRewardGranted = () => {
+      // Ad finished
+      setOneTimePass(true);
+      setShowAdOverlay(false);
+  };
+
+  const handleAdClose = () => {
+      setShowAdOverlay(false);
+  };
+
+  const consumeOneTimePass = () => {
+      setOneTimePass(false);
+  };
+
+  // --------------------
+
+  const handleUniversalInstall = async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') setDeferredPrompt(null);
+    } else if (isIOS) {
+        setShowIOSInstall(true);
+    } else {
+        alert("To install, tap the 'Share' or 'Menu' button in your browser and select 'Add to Home Screen'.");
+    }
   };
 
   const handleResetData = () => {
@@ -129,18 +219,85 @@ const App: React.FC = () => {
       setShowLegal(true);
   };
 
+  const handleTogglePro = () => {
+    if (isPro) {
+        setProExpiry(0);
+        setProType('none');
+        localStorage.removeItem(STORAGE_KEY_PRO_EXPIRY);
+        localStorage.removeItem(STORAGE_KEY_PRO_TYPE);
+    } else {
+        grantTimeBasedReward('subscription', 60 * 60 * 1000);
+    }
+  };
+
   return (
-    <div className="font-sans antialiased text-slate-100 bg-slate-900 min-h-screen flex flex-col">
-      <div className="flex-1 pb-16">
-        {screen === 'language' && <LanguageSelector onSelect={handleLanguageSelect} />}
+    <div className="font-sans antialiased text-slate-100 bg-slate-900 h-[100dvh] w-full flex flex-col overflow-hidden">
+      <div className="flex-1 relative overflow-hidden w-full">
+        {screen === 'language' && (
+             <LanguageSelector 
+                onSelect={handleLanguageSelect} 
+                onInstall={handleUniversalInstall} 
+            />
+        )}
         {screen === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} language={language} onOpenSettings={() => setShowSettings(true)} onGoHome={handleGoHome} />}
         {screen === 'partner' && <PartnerSetup onBack={() => setScreen('onboarding')} onNext={handlePartnerNext} language={language} onOpenSettings={() => setShowSettings(true)} isPro={isPro} onShowPaywall={() => setShowPaywall(true)} onGoHome={handleGoHome} />}
-        {screen === 'analyzer' && userProfile && partnerProfile && <Analyzer user={userProfile} partner={partnerProfile} isPro={isPro} onBack={() => setScreen('partner')} onShowPaywall={() => setShowPaywall(true)} language={language} onOpenSettings={() => setShowSettings(true)} onGoHome={handleGoHome} installPrompt={deferredPrompt} onInstallApp={handleInstallApp} />}
+        {screen === 'analyzer' && userProfile && partnerProfile && (
+            <Analyzer 
+                user={userProfile} 
+                partner={partnerProfile} 
+                isPro={isPro} 
+                proType={proType} // Added proType prop
+                oneTimePass={oneTimePass} 
+                onConsumeOneTimePass={consumeOneTimePass}
+                onBack={() => setScreen('partner')} 
+                onShowPaywall={() => setShowPaywall(true)} 
+                language={language} 
+                onOpenSettings={() => setShowSettings(true)} 
+                onGoHome={handleGoHome} 
+                installPrompt={deferredPrompt} 
+                onInstallApp={handleUniversalInstall} 
+            />
+        )}
       </div>
-      {!isPro && screen !== 'language' && !showLegal && <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800"><AdBanner /></div>}
-      {showPaywall && <Paywall onClose={() => setShowPaywall(false)} onShare={handleShareReward} onSubscribe={handleSubscribe} language={language} />}
+      
+      {showPaywall && (
+        <Paywall 
+            onClose={() => setShowPaywall(false)} 
+            onShare={handleShareReward} 
+            onSubscribe={handleSubscribe} 
+            language={language} 
+        />
+      )}
+      
+      {showAdOverlay && (
+          <InterstitialAd 
+            onClose={handleAdClose}
+            onReward={handleAdRewardGranted}
+            language={language}
+            mode="timer" // Ad reward mode (6s countdown then grant)
+          />
+      )}
+      
       {showLegal && <LegalDocs docType={legalDocType} onBack={() => setShowLegal(false)} />}
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} currentLanguage={language} onLanguageChange={handleLanguageSelect} onResetData={handleResetData} installPrompt={deferredPrompt} onInstallApp={handleInstallApp} onOpenLegal={handleOpenLegal} />
+      
+      {showIOSInstall && <InstallGuide onClose={() => setShowIOSInstall(false)} language={language} />}
+      
+      <CookieConsent language={language} onOpenPrivacy={() => handleOpenLegal('privacy')} />
+      
+      <SettingsModal 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+        currentLanguage={language} 
+        onLanguageChange={handleLanguageSelect} 
+        onResetData={handleResetData} 
+        installPrompt={deferredPrompt} 
+        onInstallApp={handleUniversalInstall} 
+        onOpenLegal={handleOpenLegal}
+        isPro={isPro}
+        onTogglePro={handleTogglePro}
+        proExpiry={proExpiry} 
+        proType={proType}
+      />
     </div>
   );
 };
