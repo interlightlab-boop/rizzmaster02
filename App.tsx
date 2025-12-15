@@ -16,6 +16,8 @@ const STORAGE_KEY_USER = 'rizz_user_profile';
 const STORAGE_KEY_PRO_EXPIRY = 'rizz_pro_expiry';
 const STORAGE_KEY_PRO_TYPE = 'rizz_pro_type';
 const STORAGE_KEY_LANG = 'rizz_language';
+const STORAGE_KEY_VISITED = 'rizz_has_visited';
+const STORAGE_KEY_FREE_PASSES = 'rizz_free_passes'; // New Key for Counter
 
 // ==================================================================================
 // 🚨 [사장님 필독] 심사/개발 모드 설정
@@ -38,7 +40,8 @@ const App: React.FC = () => {
   const [proType, setProType] = useState<ProType>('none');
   const [now, setNow] = useState<number>(Date.now()); 
   
-  const [oneTimePass, setOneTimePass] = useState<boolean>(false);
+  // Changed from boolean to number for 3 trials
+  const [freePasses, setFreePasses] = useState<number>(0);
 
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
   const [showAdOverlay, setShowAdOverlay] = useState<boolean>(false);
@@ -50,17 +53,16 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false); // Check if app is already installed
+  const [isStandalone, setIsStandalone] = useState(false); 
 
   // Derived Pro Status
-  // If Review Mode is TRUE, user is automatically considered PRO.
   const isPro = IS_REVIEW_MODE || proExpiry > now;
   
   useEffect(() => {
     // 1. Check iOS
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
 
-    // 2. Check Standalone (Is App Installed?)
+    // 2. Check Standalone
     const checkStandalone = () => {
       const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
                                (window.navigator as any).standalone === true;
@@ -69,7 +71,7 @@ const App: React.FC = () => {
     checkStandalone();
     window.addEventListener('resize', checkStandalone);
 
-    // 3. PWA Install Prompt Capture
+    // 3. PWA Install Prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault(); 
       setDeferredPrompt(e);
@@ -81,12 +83,29 @@ const App: React.FC = () => {
     const savedLang = localStorage.getItem(STORAGE_KEY_LANG) as Language;
     if (savedLang) {
         setLanguage(savedLang);
-        // CRITICAL UPDATE: Do NOT automatically navigate. Stay on 'language' screen.
-        // Just load the user profile into state so we can use it later.
         const savedUser = localStorage.getItem(STORAGE_KEY_USER);
         if (savedUser) {
           setUserProfile(JSON.parse(savedUser));
+          setScreen('partner'); 
+        } else {
+           setScreen('onboarding'); 
         }
+    }
+
+    // 5. FREE PASS LOGIC (STRATEGIC HOOK: 3 FREE TRIES)
+    // Check if we have a stored count. 
+    const storedPasses = localStorage.getItem(STORAGE_KEY_FREE_PASSES);
+    
+    if (storedPasses !== null) {
+        // Use stored value
+        setFreePasses(parseInt(storedPasses));
+    } else {
+        // First time initialization (or update for existing users)
+        // Give everyone 3 free passes to start/restart the hook
+        const INITIAL_PASSES = 3;
+        setFreePasses(INITIAL_PASSES);
+        localStorage.setItem(STORAGE_KEY_FREE_PASSES, INITIAL_PASSES.toString());
+        localStorage.setItem(STORAGE_KEY_VISITED, 'true');
     }
 
     // Load Pro Expiry
@@ -109,7 +128,7 @@ const App: React.FC = () => {
     // Check Payment Success
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
-        grantTimeBasedReward('subscription', 30 * 24 * 60 * 60 * 1000); // 30 Days
+        grantTimeBasedReward('subscription', 30 * 24 * 60 * 60 * 1000); 
         window.history.replaceState({}, document.title, window.location.pathname);
         alert("🎉 Thank you! Pro access activated.");
     }
@@ -136,10 +155,6 @@ const App: React.FC = () => {
   const handleLanguageSelect = (lang: Language) => {
     setLanguage(lang);
     localStorage.setItem(STORAGE_KEY_LANG, lang);
-    
-    // Intelligent Routing:
-    // If we already have a user profile loaded, skip onboarding and go straight to partner.
-    // Otherwise (new user), go to onboarding.
     if (userProfile) {
         setScreen('partner');
     } else {
@@ -147,7 +162,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Forces navigation back to the Language Selection Screen
   const handleGoHome = () => {
       setScreen('language');
   };
@@ -158,7 +172,6 @@ const App: React.FC = () => {
     setScreen('partner');
   };
 
-  // --- REWARD LOGIC ---
   const grantTimeBasedReward = (type: ProType, durationMs: number) => {
       const newExpiry = Date.now() + durationMs;
       setProExpiry(newExpiry);
@@ -166,7 +179,8 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEY_PRO_EXPIRY, newExpiry.toString());
       localStorage.setItem(STORAGE_KEY_PRO_TYPE, type);
       setShowPaywall(false);
-      setOneTimePass(false);
+      // NOTE: We do NOT reset free passes here. Pro overrides free passes.
+      // When Pro expires, they might still have free passes left if they didn't use them.
   };
 
   const handleShareReward = async () => {
@@ -200,7 +214,11 @@ const App: React.FC = () => {
   };
 
   const handleAdRewardGranted = () => {
-      setOneTimePass(true);
+      // Ad Reward now gives +1 Free Pass instead of unlocking everything indefinitely
+      // This is more profitable for ad monetization
+      const newCount = freePasses + 1;
+      setFreePasses(newCount);
+      localStorage.setItem(STORAGE_KEY_FREE_PASSES, newCount.toString());
       setShowAdOverlay(false);
   };
 
@@ -208,22 +226,23 @@ const App: React.FC = () => {
       setShowAdOverlay(false);
   };
 
-  const consumeOneTimePass = () => {
-      setOneTimePass(false);
+  // Consume a free pass (Decrement count)
+  const consumeFreePass = () => {
+      if (freePasses > 0) {
+          const newCount = freePasses - 1;
+          setFreePasses(newCount);
+          localStorage.setItem(STORAGE_KEY_FREE_PASSES, newCount.toString());
+      }
   };
 
-  // --- INSTALL LOGIC ---
   const handleUniversalInstall = async () => {
     if (deferredPrompt) {
-        // Android / Desktop Chrome
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') setDeferredPrompt(null);
     } else if (isIOS) {
-        // iOS Safari
         setShowIOSInstall(true);
     } else {
-        // Fallback for others
         alert("To install: \n1. Tap the Share/Menu button \n2. Select 'Add to Home Screen'");
     }
   };
@@ -266,9 +285,7 @@ const App: React.FC = () => {
         {screen === 'language' && (
              <LanguageSelector 
                 onSelect={handleLanguageSelect} 
-                // Only pass install handler if NOT already in standalone mode
                 onInstall={isStandalone ? undefined : handleUniversalInstall}
-                // Pass legal handler for footer links (Google Ads Requirement)
                 onOpenLegal={handleOpenLegal}
             />
         )}
@@ -288,8 +305,8 @@ const App: React.FC = () => {
                 partner={partnerProfile} 
                 isPro={isPro} 
                 proType={proType} 
-                oneTimePass={oneTimePass} 
-                onConsumeOneTimePass={consumeOneTimePass}
+                freePasses={freePasses} 
+                onConsumeFreePass={consumeFreePass}
                 onBack={() => setScreen('partner')} 
                 onShowPaywall={() => setShowPaywall(true)} 
                 language={language} 

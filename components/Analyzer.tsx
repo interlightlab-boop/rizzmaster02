@@ -5,15 +5,15 @@ import { TRANSLATIONS } from '../constants/translations';
 import { generateRizzSuggestions } from '../services/geminiService';
 import { Button } from './Button';
 import { InterstitialAd } from './InterstitialAd';
-import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X, Zap } from 'lucide-react';
 
 interface AnalyzerProps {
   user: UserProfile;
   partner: PartnerProfile;
   isPro: boolean;
   proType: 'none' | 'share' | 'subscription' | 'ad_reward'; 
-  oneTimePass: boolean; 
-  onConsumeOneTimePass: () => void; 
+  freePasses: number; // Changed from boolean to number
+  onConsumeFreePass: () => void; 
   onBack: () => void;
   onShowPaywall: () => void;
   language: Language;
@@ -24,7 +24,7 @@ interface AnalyzerProps {
 }
 
 export const Analyzer: React.FC<AnalyzerProps> = ({ 
-  user, partner, isPro, proType, oneTimePass, onConsumeOneTimePass, onBack, language, onOpenSettings, onGoHome, onShowPaywall, installPrompt, onInstallApp
+  user, partner, isPro, proType, freePasses, onConsumeFreePass, onBack, language, onOpenSettings, onGoHome, onShowPaywall, installPrompt, onInstallApp
 }) => {
   const t = TRANSLATIONS[language];
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -77,11 +77,17 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     // If IS_REVIEW_MODE is true in App.tsx, isPro passed here is TRUE.
     
     // Check if user is a paid subscriber (Unlimited Pro) or has review mode enabled
-    const isSubscriber = isPro && (proType === 'subscription' || proType === 'none'); // 'none' + isPro means Review Mode usually
+    const isSubscriber = isPro && (proType === 'subscription' || proType === 'none'); 
     
     // Determine if we should show the "Fake Loading / Ad Screen"
-    // Show Ad Loading ONLY IF user is NOT Pro.
-    const shouldShowAdLoading = !isPro;
+    // STRATEGY: If user has FREE PASSES, DO NOT SHOW AD. Hook them with speed.
+    // Show Ad Loading ONLY IF user is NOT Pro AND has NO Free Passes (although they shouldn't be here if passes = 0... wait, usually they hit Paywall)
+    // Actually, we use the ad screen to create "perceived value" or just monetization.
+    // For Rizz Apps: Free users get hooked by SPEED. 
+    const hasFreePasses = !isPro && freePasses > 0;
+    
+    const shouldShowAdLoading = !isPro && !hasFreePasses; 
+    // If hasFreePasses is true, we skip loading to make it instant (Hook strategy)
     
     if (shouldShowAdLoading) {
         setShowFakeLoading(true);
@@ -92,8 +98,8 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     
     try {
       // Logic:
-      // If we are showing the ad screen, wait 6 seconds (6000ms).
-      // If it's a paid/review user, 0ms delay.
+      // If we are showing the ad screen, wait 6 seconds.
+      // If it's a paid user OR free pass user, 0ms delay (Instant).
       const waitTime = shouldShowAdLoading ? 6000 : 0; 
       
       const minWaitPromise = new Promise(resolve => setTimeout(resolve, waitTime));
@@ -102,6 +108,12 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       const [_, result] = await Promise.all([minWaitPromise, apiPromise]);
       
       setResults(result.replies);
+      
+      // CONSUME PASS ONLY ON SUCCESS
+      if (hasFreePasses) {
+          onConsumeFreePass();
+      }
+
     } catch (error: any) {
       console.error(error);
       alert(`${error.message}`);
@@ -113,13 +125,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   const handleTryAgain = () => {
       setResults(null);
-      // Revoke pass when starting over
-      if (oneTimePass) onConsumeOneTimePass(); 
   };
 
   const handleBack = () => {
-      // Revoke pass when leaving
-      if (oneTimePass) onConsumeOneTimePass();
       onBack();
   };
 
@@ -140,7 +148,34 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   // Determines if the user has a "Premium/Gold" status (Subscription OR Review Mode)
   const isGoldStatus = proType === 'subscription' || (isPro && proType === 'none');
-
+  
+  // Is the Masterpiece Unlocked?
+  // Unlocked if: User is Pro OR User has free passes (technically they use one to see it)
+  // Wait, the logic above consumes the pass on generation.
+  // So if results are visible, and we just consumed a pass, the Masterpiece SHOULD be visible.
+  // We need to ensure the UI renders it as unlocked.
+  // Since we consumed the pass, `freePasses` might have dropped.
+  // But for the current render, if they successfully generated, they should see it.
+  // Actually, the simpler logic: If they generated successfully, they see it.
+  // The 'Lock' logic in the render loop below controls whether the 3rd reply is blurred.
+  // If `results` exist, it means we either used a pass or are Pro. 
+  // EXCEPT: If we ran out of passes? No, handleAnalyze wouldn't run or would trigger paywall if we enforced it strictly.
+  // Let's enforce: If !isPro and freePasses == 0 (before generation), we show paywall.
+  // But here, if results are present, we assume valid access.
+  // HOWEVER, we want to visually show the lock IF they didn't have access. 
+  // But since we auto-consume, let's assume if results are there, it's unlocked for this session.
+  // To be safe/strict: We only lock if !isPro and the user *didn't* just spend a pass.
+  // But since `handleAnalyze` does the spending, let's assume all results shown are fully unlocked for the moment.
+  // Actually, standard behavior: Only unlock Masterpiece if Pro. 
+  // BUT the "Free Pass" is specifically to unlock the Masterpiece. 
+  // So: If (isPro || usedFreePass) -> Unlock.
+  
+  // To simplify: If `results` are present, we show all. 
+  // The "Lock" UI below was for when we wanted to tease the user.
+  // With the "3 Free Passes" model, the user "pays" with a pass to see the full result.
+  // So we should NOT blur the 3rd result if they used a pass.
+  // We will assume if results are rendered, they are unlocked.
+  
   return (
     <div className="h-full w-full flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
       
@@ -155,13 +190,26 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       <div className="flex items-center justify-between mb-6 shrink-0">
         <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft /></button>
         <div className="flex items-center gap-2">
-            {(isPro || oneTimePass) && (
+            {/* BADGE LOGIC UPDATE */}
+            {isPro ? (
                 <div className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border flex items-center gap-1 ${isGoldStatus ? 'bg-gradient-to-r from-yellow-600 to-orange-600 border-yellow-500/50 shadow-orange-500/30' : 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/50 shadow-cyan-500/30'}`}>
                     <Sparkles className="w-3 h-3" /> 
-                    {/* Display 'PRO' for Review Mode users to act as paid users */}
-                    {proType === 'share' ? "PRO (1H)" : (oneTimePass ? "UNLOCKED" : "PRO")}
+                    {proType === 'share' ? "PRO (1H)" : "PRO"}
+                </div>
+            ) : (
+                // FREE PASS COUNTER BADGE
+                <div className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border flex items-center gap-1 ${freePasses > 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400/50 shadow-emerald-500/30 animate-pulse' : 'bg-slate-700 border-slate-600'}`}>
+                    {freePasses > 0 ? (
+                        <>
+                            <Zap className="w-3 h-3 text-yellow-300 fill-yellow-300" /> 
+                            {freePasses} LEFT
+                        </>
+                    ) : (
+                        <span className="text-slate-400">0 LEFT</span>
+                    )}
                 </div>
             )}
+            
             <button onClick={onGoHome} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"><Home className="w-5 h-5" /></button>
             <button onClick={onOpenSettings} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"><Settings className="w-5 h-5" /></button>
         </div>
@@ -183,9 +231,23 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             </div>
             
             {/* The Main Analyze Button */}
-            <Button onClick={handleAnalyze} disabled={!selectedImage || isAnalyzing} fullWidth>
+            {/* If NO PRO and NO PASSES, clicking this opens Paywall */}
+            <Button 
+                onClick={() => (!isPro && freePasses <= 0) ? onShowPaywall() : handleAnalyze()} 
+                disabled={!selectedImage || isAnalyzing} 
+                fullWidth
+                className={(!isPro && freePasses > 0 && selectedImage) ? "animate-pulse" : ""}
+            >
                 {t.analyze_btn}
+                {(!isPro && freePasses > 0) && " (Free)"}
             </Button>
+            
+            {/* Teaser Text if Free Passes Available */}
+            {!isPro && freePasses > 0 && (
+                <p className="text-center text-xs text-emerald-400 font-bold animate-pulse">
+                    ⚡ Instant Unlock Active ({freePasses} left)
+                </p>
+            )}
           </div>
         )}
 
@@ -198,35 +260,31 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 <div className="space-y-4">
                     {results.map((res, idx) => {
                         // UNLOCK LOGIC:
-                        // If isPro is true (due to review mode OR subscription), nothing is locked.
-                        const isLocked = (!isPro && !oneTimePass) && idx === 2;
+                        // With the 3-Pass model, if the user generated the result, it is fully unlocked.
+                        // We do NOT blur the third result if they spent a pass.
+                        // The lock only appears if they somehow saw this screen without paying/pass (impossible via current logic).
+                        // So we remove the blurring logic for the 3rd item IF results are generated.
+                        const isLocked = false; 
                         
                         return (
                             <div key={idx} onClick={() => isLocked ? onShowPaywall() : handleCopy(res.text, idx)} className={`relative border rounded-2xl p-5 transition-all overflow-hidden ${isLocked ? 'bg-slate-900 border-yellow-500/40 cursor-pointer shadow-2xl shadow-yellow-900/10 hover:border-yellow-400' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}`}>
-                                {isLocked && (
-                                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm">
-                                        <div className="bg-yellow-500/20 p-4 rounded-full border border-yellow-500/30 mb-3 animate-pulse shadow-2xl shadow-yellow-900/40">
-                                          <Lock className="w-8 h-8 text-yellow-400 drop-shadow-xl" />
-                                        </div>
-                                        <span className="font-black text-yellow-500 text-sm drop-shadow-lg uppercase tracking-[0.25em]">{t.unlock_best_reply}</span>
-                                        <span className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{t.tap_to_reveal}</span>
-                                    </div>
-                                )}
-                                <div className={`flex justify-between items-start mb-3 ${isLocked ? 'blur-md opacity-30' : ''}`}>
-                                    <span className={`px-2 py-1 text-[10px] font-black uppercase rounded tracking-[0.1em] ${isLocked ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'}`}>{res.tone}</span>
-                                    {!isLocked && (copiedIndex === idx ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : <Copy className="w-4 h-4 text-slate-500 hover:text-white transition-colors cursor-pointer" />)}
+                                <div className={`flex justify-between items-start mb-3`}>
+                                    <span className={`px-2 py-1 text-[10px] font-black uppercase rounded tracking-[0.1em] ${idx === 2 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'}`}>
+                                        {idx === 2 ? "🔥 MASTERPIECE" : res.tone}
+                                    </span>
+                                    {copiedIndex === idx ? <CheckCircle2 className="w-5 h-5 text-green-400" /> : <Copy className="w-4 h-4 text-slate-500 hover:text-white transition-colors cursor-pointer" />}
                                 </div>
                                 
-                                <p className={`text-lg leading-relaxed font-medium text-white mb-3 ${isLocked ? 'blur-md select-none' : ''}`}>"{res.text}"</p>
+                                <p className={`text-lg leading-relaxed font-medium text-white mb-3`}>"{res.text}"</p>
                                 
                                 {shouldShowTranslation(res) && (
-                                    <div className={`mb-4 px-3 py-3 bg-slate-700/30 rounded-lg flex items-start border border-slate-700/50 ${isLocked ? 'blur-md select-none' : ''}`}>
+                                    <div className={`mb-4 px-3 py-3 bg-slate-700/30 rounded-lg flex items-start border border-slate-700/50`}>
                                         <Globe className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                                         <p className="text-sm text-slate-300 ml-3 italic leading-relaxed">"{res.translation}"</p>
                                     </div>
                                 )}
                                 
-                                <p className={`text-xs text-slate-400 pt-3 border-t border-slate-700/50 leading-relaxed ${isLocked ? 'blur-md select-none' : ''}`}>💡 {res.explanation}</p>
+                                <p className={`text-xs text-slate-400 pt-3 border-t border-slate-700/50 leading-relaxed`}>💡 {res.explanation}</p>
                             </div>
                         );
                     })}
