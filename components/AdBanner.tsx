@@ -3,11 +3,9 @@ import React, { useEffect, useRef } from 'react';
 import { Sparkles, Crown } from 'lucide-react';
 
 // ==========================================
-// 💰 [사장님 필수 설정] 애드센스 정보 입력란
+// 💰 [사장님 설정 완료] 애드센스 실제 ID 적용
 // ==========================================
-// 애드센스 승인 전에는 "ca-pub-XXXXXXXXXXXXXXXX" (기본값)을 그대로 두세요.
-// 기본값인 경우 자동으로 '자체 홍보 배너(House Ad)'가 뜹니다. 안전합니다!
-const ADSENSE_PUBLISHER_ID = "ca-pub-XXXXXXXXXXXXXXXX"; 
+const ADSENSE_PUBLISHER_ID: string = "ca-pub-7077626760936318"; 
 // ==========================================
 
 interface AdBannerProps {
@@ -27,11 +25,14 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   
   // Safety Check: ID가 설정되었는지 확인
-  const isConfigured = ADSENSE_PUBLISHER_ID !== "ca-pub-XXXXXXXXXXXXXXXX" && slotId !== "1234567890" && slotId !== "YOUR_MREC_SLOT_ID";
+  // slotId가 기본값(1234567890)이거나 YOUR_MREC_SLOT_ID(플레이스홀더)이면 아직 광고 단위가 없는 것이므로
+  // '내부 홍보 배너(House Ad)'를 보여줍니다. -> 승인 심사때 안전함!
+  const isConfigured = ADSENSE_PUBLISHER_ID !== "ca-pub-XXXXXXXXXXXXXXXX" 
+                      && slotId !== "1234567890" 
+                      && slotId !== "YOUR_MREC_SLOT_ID";
 
   useEffect(() => {
     // 실제 배포 환경이고, ID가 올바르게 설정되었을 때만 광고 로드 시도
-    // ID가 설정되지 않았다면 구글 스크립트를 아예 실행하지 않음 (승인 거절 방지)
     if (!isDev && isConfigured && adRef.current) {
       try {
         // @ts-ignore
@@ -42,7 +43,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
     }
   }, [isConfigured]);
 
-  // 1. 애드센스 승인 전 (ID 미설정) -> 자체 홍보 배너(House Ad) 노출
+  // 1. 애드센스 승인 전 또는 광고 슬롯 ID 미설정 시 -> 자체 홍보 배너(House Ad) 노출
   // 이렇게 하면 빈 공간이 생기지 않고, 앱이 꽉 차 보이며, 승인 심사에도 안전합니다.
   if (!isConfigured) {
     return (
@@ -77,7 +78,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
     );
   }
 
-  // 2. 실제 배포용 코드 (AdSense Code) - ID가 설정된 후에만 작동
+  // 2. 실제 배포용 코드 (AdSense Code) - 광고 단위 ID(Slot ID)가 설정된 후에만 작동
   return (
     <div 
         className={`overflow-hidden flex justify-center bg-slate-900/30 rounded-xl ${className}`} 
