@@ -1,186 +1,151 @@
 
 import React from 'react';
 import { Language } from '../types';
-import { Globe, Zap, BrainCircuit, MessageCircle, Sparkles, PlusSquare, Cpu, ShieldCheck, Smartphone } from 'lucide-react';
+import { MessageCircle, Sparkles, PlusSquare, Zap, BrainCircuit, ShieldCheck, FileText } from 'lucide-react';
 
 interface LanguageSelectorProps {
   onSelect: (lang: Language) => void;
   onInstall?: () => void;
+  onOpenLegal?: (type: 'privacy' | 'terms') => void;
 }
 
-// Order based on Ad Revenue (CPM) & User Base Size
-const languages: { code: Language; label: string; flag: string }[] = [
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-  { code: 'ja', label: '日本語', flag: '🇯🇵' },
-  { code: 'es', label: 'Español', flag: '🇪🇸' },
-  { code: 'ko', label: '한국어', flag: '🇰🇷' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-  { code: 'pt', label: 'Português', flag: '🇧🇷' },
-  { code: 'zh', label: '中文', flag: '🇨🇳' },
-  { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+const languages: { code: Language; label: string; native: string; flag: string }[] = [
+  { code: 'en', label: 'English', native: 'English', flag: '🇺🇸' },
+  { code: 'ko', label: 'Korean', native: '한국어', flag: '🇰🇷' },
+  { code: 'ja', label: 'Japanese', native: '日本語', flag: '🇯🇵' },
+  { code: 'es', label: 'Spanish', native: 'Español', flag: '🇪🇸' },
+  { code: 'fr', label: 'French', native: 'Français', flag: '🇫🇷' },
+  { code: 'pt', label: 'Portuguese', native: 'Português', flag: '🇧🇷' },
+  { code: 'zh', label: 'Chinese', native: '中文', flag: '🇨🇳' },
+  { code: 'ru', label: 'Russian', native: 'Русский', flag: '🇷🇺' },
 ];
 
-export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onSelect, onInstall }) => {
+export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onSelect, onInstall, onOpenLegal }) => {
   return (
-    <div className="h-full w-full flex flex-col items-center p-6 bg-slate-900 relative overflow-hidden overflow-y-auto scrollbar-hide">
+    // CRITICAL FIX: h-full with overflow-y-auto enables internal scrolling within the fixed App shell.
+    // pb-24 ensures content isn't hidden behind bottom navigation bars.
+    <div className="h-full w-full flex flex-col items-center justify-start pt-8 pb-24 px-6 bg-[#020617] relative font-sans overflow-y-auto scrollbar-hide">
         
-        {/* Background Effects (Tech/Science Vibe) */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-            <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[100px] animate-pulse"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-            {/* Grid Pattern Overlay */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        {/* Deep Space Background (Fixed position) */}
+        <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-20%] left-[20%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px]"></div>
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 mix-blend-overlay"></div>
         </div>
 
-        {/* Install Button (Floating Top Right) */}
+        {/* Install Button (Top Right) */}
         {onInstall && (
             <button 
                 onClick={onInstall}
-                className="absolute top-6 right-6 z-50 flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-full text-xs font-bold text-white hover:bg-white/20 transition-all shadow-lg animate-in fade-in slide-in-from-top-5 duration-700"
+                className="absolute top-6 right-6 z-50 flex items-center gap-2 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full text-xs font-bold text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg"
             >
-                <PlusSquare className="w-3.5 h-3.5" />
-                Add to Home
+                <PlusSquare className="w-3.5 h-3.5 text-purple-400" />
+                Add App
             </button>
         )}
 
-        {/* Main Content Container */}
-        <div className="w-full max-w-md flex flex-col items-center z-10 space-y-10 pt-32 min-h-full justify-start md:justify-center pb-12">
+        {/* Main Content */}
+        <div className="w-full max-w-md flex flex-col items-center z-10 space-y-8 animate-in fade-in duration-700">
             
-            {/* Logo & Hero Section (Redesigned: Horizontal Layout) */}
-            <div className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-top-10 duration-700">
+            {/* HERO SECTION */}
+            <div className="flex flex-col items-center text-center space-y-4 mt-6">
                 
-                {/* Horizontal Container: Icon Left | Text Right */}
-                <div className="flex items-center gap-5 transform scale-105">
-                    
-                    {/* ICON BOX */}
-                    <div className="relative group">
-                        {/* Glow Behind Icon */}
-                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-cyan-500 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000 animate-pulse-slow"></div>
-                        
-                        {/* Icon Container */}
-                        <div className="relative w-20 h-20 bg-slate-900 rounded-2xl border border-slate-700/80 flex items-center justify-center shadow-2xl ring-1 ring-white/10">
-                             <MessageCircle 
-                                className="w-10 h-10 text-white fill-purple-500/20 stroke-[1.5px]" 
-                             />
-                             {/* Sparkle Accent */}
-                             <div className="absolute -top-1.5 -right-1.5 bg-slate-800 rounded-full p-1.5 border border-slate-600 shadow-lg">
-                                <Sparkles className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                             </div>
-                        </div>
+                {/* Logo Icon with Glow */}
+                <div className="relative group transform hover:scale-105 transition-transform duration-500">
+                    <div className="absolute -inset-4 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition duration-1000"></div>
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] rounded-3xl border border-white/10 flex items-center justify-center shadow-2xl ring-1 ring-white/5">
+                         <MessageCircle className="w-12 h-12 text-white fill-purple-500/10 stroke-[1.5px]" />
+                         <div className="absolute -top-1 -right-1 bg-white rounded-full p-1.5 shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                            <Sparkles className="w-4 h-4 text-purple-600 fill-purple-600 animate-pulse" />
+                         </div>
                     </div>
+                </div>
 
-                    {/* TEXT BOX */}
-                    <div className="flex flex-col justify-center">
-                        <h1 className="text-4xl font-black text-white leading-[0.9] tracking-tighter drop-shadow-lg flex flex-col">
-                            <span>MBTI</span>
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400">Rizz AI</span>
-                        </h1>
-                        
-                        {/* Badges Row */}
-                        <div className="flex items-center gap-2 mt-2">
-                            <div className="px-2 py-0.5 bg-white/10 rounded text-[9px] font-bold text-slate-300 border border-white/10 backdrop-blur-md">
-                                v1.5
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <span className="text-[9px] font-bold text-green-400 tracking-wide uppercase">Online</span>
-                            </div>
-                        </div>
-                    </div>
+                {/* Typography */}
+                <div className="space-y-0">
+                    <h1 className="text-5xl font-black text-white tracking-tighter drop-shadow-2xl leading-[0.9]">
+                        MBTI
+                    </h1>
+                    <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 tracking-tighter leading-[0.9]">
+                        RIZZ
+                    </h1>
                 </div>
                 
-                {/* Tagline / Subtitle */}
-                <div className="flex flex-col items-center gap-2 text-center">
-                    <p className="text-lg font-medium text-slate-300 tracking-tight">
-                        Scientific Seduction Engine
-                    </p>
-                    <div className="flex items-center justify-center gap-3 opacity-60">
-                        <span className="h-px w-8 bg-gradient-to-r from-transparent to-slate-500"></span>
-                        <p className="text-[10px] font-bold tracking-[0.25em] text-slate-400 uppercase">
-                            NEURAL NET POWERED
-                        </p>
-                        <span className="h-px w-8 bg-gradient-to-l from-transparent to-slate-500"></span>
-                    </div>
-                </div>
+                <p className="text-[10px] font-bold text-slate-400 tracking-[0.3em] uppercase bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                    AI Dating Wingman v1.5
+                </p>
             </div>
 
-            {/* Feature Pills */}
-            <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-200">
-                <div className="flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 rounded-full px-4 py-2 backdrop-blur-sm shadow-lg">
-                    <BrainCircuit className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-xs font-semibold text-slate-300">Psychology</span>
+            {/* LANGUAGE LIST - 2 Column Grid */}
+            <div className="w-full space-y-3 px-1">
+                <div className="flex items-center gap-2 mb-1 px-1 justify-center">
+                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Language</span>
+                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-800/60 border border-slate-700/50 rounded-full px-4 py-2 backdrop-blur-sm shadow-lg">
-                    <Zap className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-xs font-semibold text-slate-300">Compatibility</span>
-                </div>
-            </div>
 
-            {/* Language Grid */}
-            <div className="w-full space-y-5 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 pb-4">
-                <div className="flex items-center gap-3 justify-center text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">
-                    <span className="h-px w-8 bg-slate-800"></span>
-                    <Globe className="w-3 h-3" /> Initialize System
-                    <span className="h-px w-8 bg-slate-800"></span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 px-2">
+                <div className="grid grid-cols-2 gap-3">
                     {languages.map((lang) => (
                         <button
                             key={lang.code}
                             onClick={() => onSelect(lang.code)}
-                            className="flex items-center gap-3 p-4 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:bg-slate-700/80 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 transition-all group active:scale-95"
+                            className="group relative flex flex-col items-center justify-center p-3.5 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-purple-500/30 rounded-xl transition-all active:scale-[0.98] overflow-hidden text-center gap-1.5 shadow-sm"
                         >
-                            <span className="text-2xl filter drop-shadow-md group-hover:scale-110 transition-transform">{lang.flag}</span>
-                            <span className="text-sm font-bold text-slate-200 group-hover:text-white">{lang.label}</span>
+                            <span className="text-2xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300">{lang.flag}</span>
+                            <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold text-white tracking-wide group-hover:text-purple-300 transition-colors">{lang.label}</span>
+                                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{lang.native}</span>
+                            </div>
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* EXPANDED SEO CONTENT (Styled as Technical Specs for AdSense Approval) */}
-            <div className="w-full px-4 pt-12 pb-8 text-slate-600 opacity-60 animate-in fade-in duration-1000 delay-500">
-                <div className="border-t border-slate-800 pt-8 space-y-8">
-                    
-                    {/* Section 1: Core Functionality */}
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-slate-500 mb-1">
-                            <Cpu className="w-3 h-3" />
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest">Core Neural Architecture</h3>
-                        </div>
-                        <p className="text-[10px] leading-relaxed">
-                            MBTI Rizz AI leverages advanced Large Language Models (LLMs) tuned on social dynamics and Myers-Briggs Type Indicator (MBTI) psychology. Our algorithm analyzes chat screenshot contexts, detecting tone, intent, and personality indicators (ISTJ, ENFP, etc.) to generate high-conversion dating responses.
-                        </p>
-                    </div>
+            {/* VISIBLE SEO & GOOGLE ADS COMPLIANCE CONTENT */}
+            <article className="w-full mt-8 p-6 bg-slate-900/50 rounded-3xl border border-white/5 text-center space-y-6 backdrop-blur-sm">
+                <div className="space-y-2">
+                    <h2 className="text-lg font-bold text-white flex items-center justify-center gap-2">
+                        <BrainCircuit className="w-5 h-5 text-purple-400" />
+                        How It Works
+                    </h2>
+                    <p className="text-xs text-slate-400 leading-relaxed px-2">
+                        MBTI Rizz AI uses advanced psychology to analyze your chat screenshots. We generate the perfect reply tailored to your partner's personality type.
+                    </p>
+                </div>
 
-                    {/* Section 2: Platform Support */}
-                    <div className="space-y-2">
-                         <div className="flex items-center gap-2 text-slate-500 mb-1">
-                            <Smartphone className="w-3 h-3" />
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest">Cross-Platform Protocols</h3>
+                <div className="grid grid-cols-1 gap-3 text-left">
+                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <Zap className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-slate-200 text-sm">Instant Rizz</h3>
+                            <p className="text-[11px] text-slate-500 leading-tight mt-1">Generate witty, charming replies in seconds using our Neural Engine.</p>
                         </div>
-                        <p className="text-[10px] leading-relaxed">
-                            Optimized for major dating ecosystems including Tinder, Hinge, Bumble, and Instagram DMs. The system processes visual data (OCR) from screenshots to provide context-aware suggestions, functioning as a real-time digital wingman for both casual and serious relationship goals.
-                        </p>
                     </div>
-
-                    {/* Section 3: Privacy & Security */}
-                    <div className="space-y-2">
-                         <div className="flex items-center gap-2 text-slate-500 mb-1">
-                            <ShieldCheck className="w-3 h-3" />
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest">Privacy Standards</h3>
+                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                        <ShieldCheck className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-bold text-slate-200 text-sm">Safe & Private</h3>
+                            <p className="text-[11px] text-slate-500 leading-tight mt-1">Your chats are analyzed anonymously and never stored on our servers.</p>
                         </div>
-                        <p className="text-[10px] leading-relaxed">
-                            Data processing occurs in ephemeral instances. Uploaded conversation screenshots are analyzed for semantic context and immediately discarded. User profiles and preference vectors are stored locally on the device to ensure maximum privacy and data sovereignty.
-                        </p>
-                    </div>
-
-                    {/* Footer Copyright */}
-                    <div className="text-[10px] text-center pt-4 border-t border-slate-800/50">
-                        &copy; {new Date().getFullYear()} MBTI Rizz AI. Engineered for human connection.
                     </div>
                 </div>
-            </div>
+
+                {/* CRITICAL FOR GOOGLE ADS: Visible Links to Privacy & Terms */}
+                {onOpenLegal && (
+                    <div className="pt-4 border-t border-white/5 flex flex-wrap justify-center gap-4">
+                        <button onClick={() => onOpenLegal('privacy')} className="text-[10px] text-slate-500 hover:text-white transition-colors flex items-center gap-1">
+                            <FileText className="w-3 h-3" /> Privacy Policy
+                        </button>
+                        <button onClick={() => onOpenLegal('terms')} className="text-[10px] text-slate-500 hover:text-white transition-colors flex items-center gap-1">
+                            <FileText className="w-3 h-3" /> Terms of Service
+                        </button>
+                    </div>
+                )}
+                
+                <div className="text-[9px] text-slate-600">
+                    <p>© 2025 MBTI Rizz AI. All rights reserved.</p>
+                </div>
+            </article>
 
         </div>
     </div>

@@ -3,50 +3,124 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="description" content="MBTI Rizz AI (mbtirizz.com) is the ultimate AI dating wingman. Upload chat screenshots to get instant, psychologically proven replies based on MBTI and social dynamics.">
-    <meta name="keywords" content="MBTI Rizz, MBTI Dating, Rizz App, AI Dating Assistant, Rizz AI, Dating Wingman, Chat Helper, Tinder Rizz, Hinge Opener">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- SEO & Search Engine Optimization -->
+    <meta name="description" content="MBTI Rizz AI is the #1 AI Dating Wingman. Upload chat screenshots to get instant, psychologically proven replies tailored to your partner's MBTI. Works for Tinder, Hinge, and IG.">
+    <meta name="keywords" content="MBTI Rizz, Rizz App, AI Dating Coach, Dating Wingman, Chat Helper, Tinder Opener, Hinge Reply, AI Flirting, MBTI Compatibility, Dating Assistant">
+    <meta name="author" content="MBTI Rizz AI">
+    
+    <!-- Open Graph / Social Media Previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mbtirizz.com/" />
+    <meta property="og:title" content="MBTI Rizz AI - Your AI Dating Wingman" />
+    <meta property="og:description" content="Don't know what to say? Upload a screenshot and let AI write the perfect reply based on MBTI psychology." />
+    <meta property="og:image" content="https://file.aistudio.google.com/api/image/File:file_6m7xy8HF2RZjZWvf" />
+    <meta property="og:site_name" content="MBTI Rizz AI" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MBTI Rizz AI - Your AI Dating Wingman" />
+    <meta name="twitter:description" content="Generate the perfect reply for your crush using AI & MBTI psychology." />
+    <meta name="twitter:image" content="https://file.aistudio.google.com/api/image/File:file_6m7xy8HF2RZjZWvf" />
+    
     <title>MBTI Rizz AI - Your Dating Wingman</title>
+    
+    <!-- Fonts: Outfit (Modern, Tech, Rizz Vibe) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- CRITICAL: Tailwind CSS CDN (Guarantees styles load even if build fails) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+            },
+            colors: {
+              slate: {
+                850: '#151e2e',
+                900: '#0f172a',
+                950: '#020617', // Darker background for OLED
+              },
+              primary: {
+                500: '#8b5cf6', // Violet
+                600: '#7c3aed',
+              }
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'shimmer': 'shimmer 2s infinite',
+            },
+            keyframes: {
+              shimmer: {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(100%)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MBTI Rizz">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#020617">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTUJUSSBSaXp6IEFJIiwiY2hvcnRfbmFtZSI6Ik1CVGkgUml6eiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwZjE3MmEiLCJ0aGVtZV9jb2xvciI6IiMwZjE3MmEiLCJpY29ucyI6W3sic3JjIjoiaHR0cHM6Ly9maWxlLmFpc3R1ZGlvLmdvb2dsZS5jb20vYXBpL2ltYWdlL0ZpbGU6ZmlsZV82bTd4eThIRjJSWndaV3ZmIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3BuZyJdfQ==">
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.2.7",
-    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.33.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    
+    <!-- Native App Icons (Embedded SVG for Reliability) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3YzNhZWQiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0ZjQ2ZTUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyOCIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0zNTIgMTI4SDE2MGMtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTkyYzAgMTcuNyAxNC4zIDMyIDMyIDMyaDU4LjVsNDAuNiA1MC44YzQuNSA1LjYgMTMuMSA1LjYgMTcuNiAwbDQwLjYtNTAuOEgzNTJjMTcuNyAwIDMyLTE0LjMgMzItMzJWMTYwYzAtMTcuNy0xNC4zLTMyLTMyLTMyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjA4IDIwOGgzMm0zMiAwaDMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3YzNhZWQiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0ZjQ2ZTUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyOCIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0zNTIgMTI4SDE2MGMtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTkyYzAgMTcuNyAxNC4zIDMyIDMyIDMyaDU4LjVsNDAuNiA1MC44YzQuNSA1LjYgMTMuMSA1LjYgMTcuNiAwbDQwLjYtNTAuOEgzNTJjMTcuNyAwIDMyLTE0LjMgMzItMzJWMTYwYzAtMTcuNy0xNC4zLTMyLTMyLTMyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjA4IDIwOGgzMm0zMiAwaDMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==">
+    
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTUJUSSBSaXp6IEFJIiwiY2hvcnRfbmFtZSI6Ik1CVGkgUml6eiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwMjA2MTciLCJ0aGVtZV9jb2xvciI6IiMwMjA2MTciLCJzdGFydF91cmwiOiIvIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMmR5QjRiV3h1YzwwaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaVZtbGx3UW05NElqQWdNQ0ExTVRJMU1USWlQajVrWldSelBqeHNhVzVsWVhKSGRHRmthV1Z1ZENCcFpEMGlZU0lqeE1VbUlpQjVNVDBpTUMxbElqeHlNREl1SWpFd01DVWlQanh6ZEc5d0lHOZG1abTNsZEMwaU1DdWlJSFZ5YkRvaUkzaGlOV05tTmlJdmV6MXpkRzl3SUc5bVpuTmxkRDBpT1RJbUlqNDhMMnhwYm1WaGNrZHlZV1JwWlc1MElHNWtjRzVoYmlCMWNtY3NJREV5T0NJZ1ptbHNiRFFpZFhKc0tDTmhLUzF5WldOMElIZ3BZMzE1TDIxaGVHbG5hSFE5SWpBeE1qa0tNUzR5TnlBd0xUTXlJREUwTGpNdE16SWdNekoyTVRreVl6QXNJREUzTGpjZ01UUXVNeUF6TWlBek1taDFPRGsxYkRRd0xqW1ZVdzRpTURndU5TNDJNUzR6TGpFZ01Fd3FMVFF3TGpaMU1EZ2lTRE0xTWlBeE55NDdJRE15TFRFMExqTXRNekl0TXpKMk1UWXdZekF0TVRjdU55MHhOQzR6TFRNeUxUTXlmU0lnWm1sc2JEMGlibTl1WlNJZ2MzUnliMnRsUFNJakWmWm1JaUJ6ZEhKdmEyVXRkMmxrZEdnOUlqTXlJaUJ6ZEhKdmEyVXRiR2x1WldOaGNEMGljbTkxYm1RaUlITjBjbTlyWlMxc2FXNXFiaMjVpY205MWJtUWlMemtnY0dGMGFDQmtQV00wTVRJc01qQTROekptTXpJZ21pQjRaR0FpSUhOMGNtOXJaVDBpSTJab1ppSWdjM1J5YjJ0bGRHdzlJak15SWlCemRISnZhMlV0YkdsdVpXTmhjRDBpY205MWJtUWlMelcrUEM5emRtY2ciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJdfV19">
+  
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+        "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+        "vite": "https://esm.sh/vite@^7.2.7",
+        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
+  <body class="font-sans antialiased text-white bg-[#020617]">
     <div id="root"></div>
-    <!-- CRITICAL: Entry point for the React App -->
     <script type="module" src="/index.tsx"></script>
     
+    <!-- Rich Content for Google Bots / SEO -->
     <noscript>
-        <div style="padding: 20px; font-family: sans-serif; color: #ddd;">
-            <h1>MBTI Rizz AI - The Ultimate Dating Assistant</h1>
-            <p>MBTI Rizz AI helps you generate the perfect reply for your crush, partner, or dating match using advanced artificial intelligence.</p>
-            <h2>How it works</h2>
-            <p>Simply upload a screenshot of your chat from Tinder, Hinge, WhatsApp, or Instagram. Our AI analyzes the conversation context, mood, and partner's personality.</p>
-            <h2>Features</h2>
+        <div style="padding: 20px; font-family: sans-serif; color: #1e293b; line-height: 1.6;">
+            <h1>MBTI Rizz AI - The Ultimate AI Dating Assistant</h1>
+            <p><strong>MBTI Rizz AI</strong> is a revolutionary app that helps you generate the perfect reply specifically tailored to your crush or partner's MBTI personality type.</p>
+            
+            <h2>Why Use MBTI Rizz AI?</h2>
             <ul>
-                <li><strong>Screenshot Analysis:</strong> Upload your chat history and let our AI analyze the context.</li>
-                <li><strong>MBTI Compatibility:</strong> Our engine uses Myers-Briggs Type Indicator psychology to tailor responses.</li>
-                <li><strong>Multilingual Support:</strong> Works in English, Korean, Japanese, Spanish, French, and more.</li>
+                <li><strong>Screenshot Analysis:</strong> Upload a screenshot of your chat (Tinder, Hinge, Instagram, WhatsApp) and let our Neural Engine analyze the context.</li>
+                <li><strong>MBTI Compatibility:</strong> We use the Myers-Briggs Type Indicator (MBTI) psychology to craft responses that resonate with types like INTJ, ENFP, ISTP, and more.</li>
+                <li><strong>Dating Coach in Your Pocket:</strong> Get advice on tone, timing, and specific phrasing to increase your attractiveness ("Rizz").</li>
+                <li><strong>Multi-Language Support:</strong> Works fluently in English, Korean (한국어), Japanese (日本語), Spanish, French, and more.</li>
             </ul>
-            <p>Stop sending boring texts. Get MBTI Rizz AI today at mbtirizz.com.</p>
+
+            <h2>How It Works</h2>
+            <ol>
+                <li>Upload a screenshot of your conversation.</li>
+                <li>Select your partner's MBTI and your desired vibe (Witty, Sweet, Bold).</li>
+                <li>Get 3 instant, high-conversion replies generated by our advanced AI.</li>
+            </ol>
+            
+            <p>Stop sending boring texts. Upgrade your dating game with <em>MBTI Rizz AI</em> today.</p>
+            <a href="https://mbtirizz.com">Visit Official Site</a>
         </div>
     </noscript>
   </body>

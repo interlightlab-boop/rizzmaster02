@@ -4,17 +4,20 @@
 @tailwind utilities;
 
 :root {
-  background-color: #0f172a; /* Slate 900 */
+  background-color: #020617; /* Darkest Slate */
   color: #f8fafc;
 }
 
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent body scroll */
-  touch-action: pan-x pan-y;
-  overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* CRITICAL FIX: Changed from 'hidden' to 'auto' to allow scrolling */
+  overflow-x: hidden;
+  overflow-y: auto; 
+  touch-action: pan-y;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* Custom Scrollbar for a cleaner mobile look */
@@ -22,14 +25,14 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #0f172a;
 }
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #334155;
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #475569;
 }
 
 /* Utility for hiding scrollbars but allowing scroll */

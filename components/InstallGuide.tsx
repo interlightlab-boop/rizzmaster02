@@ -13,9 +13,12 @@ export const InstallGuide: React.FC<InstallGuideProps> = ({ onClose, language })
   
   if (!isIOS) return null;
 
+  // Embedded SVG Icon (Purple Gradient)
+  const APP_ICON_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3YzNhZWQiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0ZjQ2ZTUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyOCIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0zNTIgMTI4SDE2MGMtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTkyYzAgMTcuNyAxNC4zIDMyIDMyIDMyaDU4LjVsNDAuNiA1MC44YzQuNSA1LjYgMTMuMSA1LjYgMTcuNiAwbDQwLjYtNTAuOEgzNTJjMTcuNyAwIDMyLTE0LjMgMzItMzJWMTYwYzAtMTcuNy0xNC4zLTMyLTMyLTMyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjA4IDIwOGgzMm0zMiAwaDMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-slate-900 border-t border-slate-700 w-full max-w-md p-6 rounded-t-3xl relative shadow-2xl animate-in slide-in-from-bottom-10 duration-500">
+      <div className="bg-slate-900 border-t border-slate-700 w-full max-w-md p-6 rounded-t-3xl relative shadow-2xl animate-in slide-in-from-bottom-10 duration-500 pb-10">
         <button 
             onClick={onClose}
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 rounded-full"
@@ -24,12 +27,12 @@ export const InstallGuide: React.FC<InstallGuideProps> = ({ onClose, language })
         </button>
 
         <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg border border-slate-700">
-                <img src="/pwa-192x192.png" alt="App Icon" className="w-full h-full rounded-2xl opacity-0" onError={(e) => {
-                    // Fallback visual if icon not found
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<svg class="w-8 h-8 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>';
-                }} />
+            <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center shadow-2xl border border-slate-700 overflow-hidden ring-4 ring-black/50">
+                <img 
+                    src={APP_ICON_URL} 
+                    alt="App Icon" 
+                    className="w-full h-full object-cover" 
+                />
             </div>
 
             <h3 className="text-xl font-bold text-white">
@@ -52,7 +55,7 @@ export const InstallGuide: React.FC<InstallGuideProps> = ({ onClose, language })
                 </div>
             </div>
             
-            <div className="text-xs text-slate-500 pt-2 flex items-center gap-2">
+            <div className="text-xs text-slate-500 pt-2 flex items-center gap-2 justify-center">
                 <ArrowDown className="w-4 h-4 animate-bounce" />
                 The Share button is usually at the bottom of Safari
             </div>

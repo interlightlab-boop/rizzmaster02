@@ -127,11 +127,25 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
       });
   };
 
-  // --- Locked Feature Logic ---
+  // --- STANDARD LISTS for Locked Feature Logic ---
+  const standardGoals = ['Casual', 'Humor', 'Reconnect', 'Date', 'Intimacy'];
+  const standardVibes = ['Witty', 'Sweet', 'Chill', 'Bold', 'Intellectual'];
+  
   const lockedGoals = ['Date', 'Intimacy'];
   const lockedVibes = ['Bold', 'Intellectual'];
 
   const handleOptionSelect = (type: 'goal' | 'vibe', value: string) => {
+      if (value === 'Custom') {
+          if (!isPro) {
+              onShowPaywall();
+              return;
+          }
+          // Clearing the field triggers the input display (if it's not in standard list)
+          // We set it to empty string so the input is initially empty for user to type
+          setFormData({ ...formData, [type]: '' });
+          return;
+      }
+
       const isLocked = type === 'goal' ? lockedGoals.includes(value) : lockedVibes.includes(value);
       
       if (isLocked && !isPro) {
@@ -148,12 +162,15 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
     { label: t.gender_other, value: Gender.Other },
   ];
   
+  const standardRelations = ['Stranger', 'Friend', 'Colleague', 'Ex', 'Crush'];
+  
   const relationOptions = [
     { label: t.rel_stranger, value: 'Stranger' },
     { label: t.rel_friend, value: 'Friend' },
     { label: t.rel_colleague, value: 'Colleague' },
     { label: t.rel_ex, value: 'Ex' },
     { label: t.rel_crush, value: 'Crush' },
+    { label: t.rel_custom, value: 'Custom' },
   ];
 
   const goalOptions = [
@@ -162,6 +179,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
     { label: t.goal_reconnect, value: 'Reconnect' },
     { label: t.goal_date, value: 'Date' },
     { label: t.goal_intimacy, value: 'Intimacy' },
+    { label: t.goal_custom, value: 'Custom' }, // Added Custom Button
   ];
 
   const vibeOptions = [
@@ -170,7 +188,18 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
     { label: t.vibe_chill, value: 'Chill' },
     { label: t.vibe_bold, value: 'Bold' },
     { label: t.vibe_smart, value: 'Intellectual' },
+    { label: t.vibe_custom, value: 'Custom' }, // Added Custom Button
   ];
+  
+  // Custom Logic Helpers
+  const isCustomRelation = !standardRelations.includes(formData.relation);
+  const selectValueRelation = isCustomRelation ? 'Custom' : formData.relation;
+
+  // Custom Logic for Goal & Vibe
+  // It is custom if the current value is NOT in the standard list AND it is not equal to 'Custom' literal (which is just the button value)
+  // But strictly, if it's not in standardGoals, it's custom.
+  const isCustomGoal = !standardGoals.includes(formData.goal);
+  const isCustomVibe = !standardVibes.includes(formData.vibe);
 
   return (
     <div className="h-full w-full flex flex-col p-4 max-w-md mx-auto animate-in slide-in-from-right duration-500">
@@ -301,18 +330,45 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
               value={formData.politeness}
               onChange={(e) => setFormData({ ...formData, politeness: e.target.value })}
             />
-
-           <Select
-              label={t.relation}
-              options={relationOptions}
-              value={formData.relation}
-              onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
-            />
+           
+           {/* RELATIONSHIP SECTION with Custom Logic */}
+           <div className="space-y-2">
+               <Select
+                  label={t.relation}
+                  options={relationOptions}
+                  value={selectValueRelation}
+                  onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Custom') {
+                          if (!isPro) {
+                              onShowPaywall();
+                              return;
+                          }
+                          // If switching to Custom for the first time or if it was previously standard
+                          setFormData({ ...formData, relation: '' });
+                      } else {
+                          setFormData({ ...formData, relation: val });
+                      }
+                  }}
+                />
+                
+                {/* Custom Input Field - Only shows if 'Custom' selected (checked via isCustomRelation) AND user is Pro */}
+                {isCustomRelation && (
+                    <div className="animate-in slide-in-from-top-2 fade-in">
+                        <Input 
+                            label="" 
+                            placeholder={t.rel_custom_placeholder}
+                            value={formData.relation}
+                            onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                            autoFocus
+                        />
+                    </div>
+                )}
+           </div>
 
             <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-400 ml-1 flex justify-between">
                     <span>{t.their_mbti}</span>
-                    {/* Display logic: Show 'Not Selected' (gray) if null, 'Unknown' (Cyan) if selected unknown, or the specific MBTI (Purple) */}
                     <span className={`text-xs font-bold ${!formData.mbti ? 'text-slate-500' : (formData.mbti === MBTI.Unknown ? 'text-cyan-400' : 'text-purple-400')}`}>
                         {!formData.mbti ? t.mbti_unknown : (formData.mbti === MBTI.Unknown ? 'Unknown' : formData.mbti)}
                     </span>
@@ -353,66 +409,114 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
                 </button>
             </div>
 
-            {/* Custom Select for Goal with Locking */}
+            {/* Custom Select for Goal with Locking + Custom Input */}
             <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-400 ml-1">{t.goal}</label>
                 <div className="grid grid-cols-1 gap-2">
                     {goalOptions.map(opt => {
                         const isLocked = lockedGoals.includes(opt.value) && !isPro;
+                        const isCustom = opt.value === 'Custom';
+                        // Highlight if selected. For custom, highlight if isCustomGoal is true.
+                        const isSelected = isCustom ? isCustomGoal : formData.goal === opt.value;
+
                         return (
                             <button
                                 key={opt.value}
                                 type="button"
                                 onClick={() => handleOptionSelect('goal', opt.value)}
                                 className={`text-left px-4 py-3 rounded-xl border flex items-center justify-between transition-all ${
-                                    formData.goal === opt.value
+                                    isSelected
                                     ? 'bg-slate-700 border-purple-500 text-white'
                                     : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                                 }`}
                             >
                                 <span className="text-sm">{opt.label}</span>
-                                {isLocked && <Lock className="w-4 h-4 text-slate-500" />}
+                                {/* Lock icon if it's a locked standard feature OR if it's the Custom button and user isn't Pro */}
+                                {(isLocked || (isCustom && !isPro)) && <Lock className="w-4 h-4 text-slate-500" />}
                             </button>
                         )
                     })}
                 </div>
+                {/* Custom Goal Input */}
+                {isCustomGoal && (
+                    <div className="animate-in slide-in-from-top-2 fade-in">
+                         <Input 
+                            label="" 
+                            placeholder={t.goal_custom_placeholder}
+                            value={formData.goal}
+                            onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+                            autoFocus
+                        />
+                    </div>
+                )}
             </div>
             
             <div className="h-px bg-slate-700/50 my-2" />
             
-            {/* Custom Select for Vibe with Locking */}
+            {/* Custom Select for Vibe with Locking + Custom Input */}
             <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-400 ml-1">{t.vibe_label}</label>
                 <div className="grid grid-cols-1 gap-2">
                     {vibeOptions.map(opt => {
                         const isLocked = lockedVibes.includes(opt.value) && !isPro;
+                        const isCustom = opt.value === 'Custom';
+                        const isSelected = isCustom ? isCustomVibe : formData.vibe === opt.value;
+
                         return (
                             <button
                                 key={opt.value}
                                 type="button"
                                 onClick={() => handleOptionSelect('vibe', opt.value)}
                                 className={`text-left px-4 py-3 rounded-xl border flex items-center justify-between transition-all ${
-                                    formData.vibe === opt.value
+                                    isSelected
                                     ? 'bg-slate-700 border-purple-500 text-white'
                                     : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                                 }`}
                             >
                                 <span className="text-sm">{opt.label}</span>
-                                {isLocked && <Lock className="w-4 h-4 text-slate-500" />}
+                                {(isLocked || (isCustom && !isPro)) && <Lock className="w-4 h-4 text-slate-500" />}
                             </button>
                         )
                     })}
                 </div>
+                {/* Custom Vibe Input */}
+                {isCustomVibe && (
+                    <div className="animate-in slide-in-from-top-2 fade-in">
+                         <Input 
+                            label="" 
+                            placeholder={t.vibe_custom_placeholder}
+                            value={formData.vibe}
+                            onChange={(e) => setFormData({ ...formData, vibe: e.target.value })}
+                            autoFocus
+                        />
+                    </div>
+                )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* CONTEXT - LOCKED FOR NON-PRO */}
+            <div className="flex flex-col gap-2 relative">
                 <label className="text-sm font-medium text-slate-400 ml-1">{t.context_label}</label>
-                <textarea
-                  className="bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-slate-500 min-h-[80px] resize-none text-sm"
-                  placeholder={t.context_placeholder}
-                  value={formData.context}
-                  onChange={(e) => setFormData({ ...formData, context: e.target.value })}
-                />
+                
+                <div className="relative">
+                    {!isPro && (
+                        <div 
+                            onClick={onShowPaywall} 
+                            className="absolute inset-0 z-20 bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-xl cursor-pointer border border-yellow-500/30 hover:bg-slate-900/50 transition-colors"
+                        >
+                             <div className="bg-yellow-500/20 p-2 rounded-full border border-yellow-500/30 mb-1">
+                                <Lock className="w-5 h-5 text-yellow-400" />
+                             </div>
+                             <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Pro Only Feature</span>
+                        </div>
+                    )}
+                    <textarea
+                      className={`w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder-slate-500 min-h-[80px] resize-none text-sm ${!isPro ? 'opacity-30' : ''}`}
+                      placeholder={t.context_placeholder}
+                      value={formData.context}
+                      onChange={(e) => setFormData({ ...formData, context: e.target.value })}
+                      disabled={!isPro}
+                    />
+                </div>
             </div>
         </div>
 

@@ -17,6 +17,14 @@ const STORAGE_KEY_PRO_EXPIRY = 'rizz_pro_expiry';
 const STORAGE_KEY_PRO_TYPE = 'rizz_pro_type';
 const STORAGE_KEY_LANG = 'rizz_language';
 
+// ==================================================================================
+// 🚨 [사장님 필독] 심사/개발 모드 설정
+// ==================================================================================
+// true: 모든 기능 잠금 해제 (심사 제출용, 개발 테스트용) - 광고 안 나옴, 결제 안 뜸
+// false: 실제 출시 모드 - Pro 아니면 기능 잠김, 광고 나옴
+// ==================================================================================
+const IS_REVIEW_MODE = true; 
+
 type ProType = 'none' | 'share' | 'subscription' | 'ad_reward';
 
 const App: React.FC = () => {
@@ -26,16 +34,14 @@ const App: React.FC = () => {
   const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null);
   
   // --- PRO STATUS STATE ---
-  // 1. Time-based Pro (Subscription or Share)
   const [proExpiry, setProExpiry] = useState<number>(0); 
   const [proType, setProType] = useState<ProType>('none');
   const [now, setNow] = useState<number>(Date.now()); 
   
-  // 2. One-Time Pass (Ad Reward) - strictly for ONE analysis result unlock
   const [oneTimePass, setOneTimePass] = useState<boolean>(false);
 
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
-  const [showAdOverlay, setShowAdOverlay] = useState<boolean>(false); // For Watch Ad option
+  const [showAdOverlay, setShowAdOverlay] = useState<boolean>(false);
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showLegal, setShowLegal] = useState<boolean>(false);
@@ -44,28 +50,42 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showIOSInstall, setShowIOSInstall] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false); // Check if app is already installed
 
-  // Derived Pro Status: strictly based on current time vs expiry time
-  const isPro = proExpiry > now;
+  // Derived Pro Status
+  // If Review Mode is TRUE, user is automatically considered PRO.
+  const isPro = IS_REVIEW_MODE || proExpiry > now;
   
   useEffect(() => {
+    // 1. Check iOS
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
 
+    // 2. Check Standalone (Is App Installed?)
+    const checkStandalone = () => {
+      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+                               (window.navigator as any).standalone === true;
+      setIsStandalone(isStandaloneMode);
+    };
+    checkStandalone();
+    window.addEventListener('resize', checkStandalone);
+
+    // 3. PWA Install Prompt Capture
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault(); 
       setDeferredPrompt(e);
+      console.log("Install prompt captured");
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+    // 4. Load Saved Data
     const savedLang = localStorage.getItem(STORAGE_KEY_LANG) as Language;
     if (savedLang) {
         setLanguage(savedLang);
+        // CRITICAL UPDATE: Do NOT automatically navigate. Stay on 'language' screen.
+        // Just load the user profile into state so we can use it later.
         const savedUser = localStorage.getItem(STORAGE_KEY_USER);
         if (savedUser) {
           setUserProfile(JSON.parse(savedUser));
-          setScreen('partner'); 
-        } else {
-            setScreen('onboarding');
         }
     }
 
@@ -108,6 +128,7 @@ const App: React.FC = () => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('resize', checkStandalone);
       clearInterval(tick);
     };
   }, [proExpiry]);
@@ -115,10 +136,21 @@ const App: React.FC = () => {
   const handleLanguageSelect = (lang: Language) => {
     setLanguage(lang);
     localStorage.setItem(STORAGE_KEY_LANG, lang);
-    if (screen === 'language') setScreen('onboarding');
+    
+    // Intelligent Routing:
+    // If we already have a user profile loaded, skip onboarding and go straight to partner.
+    // Otherwise (new user), go to onboarding.
+    if (userProfile) {
+        setScreen('partner');
+    } else {
+        setScreen('onboarding');
+    }
   };
 
-  const handleGoHome = () => setScreen('language');
+  // Forces navigation back to the Language Selection Screen
+  const handleGoHome = () => {
+      setScreen('language');
+  };
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setUserProfile(profile);
@@ -132,8 +164,6 @@ const App: React.FC = () => {
   };
 
   // --- REWARD LOGIC ---
-
-  // 1. Grant Time-Based Reward (Share/Sub)
   const grantTimeBasedReward = (type: ProType, durationMs: number) => {
       const newExpiry = Date.now() + durationMs;
       setProExpiry(newExpiry);
@@ -141,7 +171,6 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEY_PRO_EXPIRY, newExpiry.toString());
       localStorage.setItem(STORAGE_KEY_PRO_TYPE, type);
       setShowPaywall(false);
-      // Reset one-time pass since they are now Pro
       setOneTimePass(false);
   };
 
@@ -151,8 +180,6 @@ const App: React.FC = () => {
         text: 'Check out this AI Wingman! It writes the perfect replies based on MBTI.',
         url: 'https://mbtirizz.com'
     };
-    
-    // Grant 1 Hour
     const grantDuration = 60 * 60 * 1000; 
 
     if (navigator.share && navigator.canShare(shareData)) {
@@ -174,14 +201,10 @@ const App: React.FC = () => {
   };
 
   const handleSubscribe = () => {
-    // In a real app, this redirects to Stripe/Payment
     grantTimeBasedReward('subscription', 30 * 24 * 60 * 60 * 1000);
   };
 
-  // 2. Grant One-Time Pass (Ad/Fake Loading)
-  // Kept logic but removed UI trigger from Paywall to be safe
   const handleAdRewardGranted = () => {
-      // Ad finished
       setOneTimePass(true);
       setShowAdOverlay(false);
   };
@@ -194,17 +217,19 @@ const App: React.FC = () => {
       setOneTimePass(false);
   };
 
-  // --------------------
-
+  // --- INSTALL LOGIC ---
   const handleUniversalInstall = async () => {
     if (deferredPrompt) {
+        // Android / Desktop Chrome
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') setDeferredPrompt(null);
     } else if (isIOS) {
+        // iOS Safari
         setShowIOSInstall(true);
     } else {
-        alert("To install, tap the 'Share' or 'Menu' button in your browser and select 'Add to Home Screen'.");
+        // Fallback for others
+        alert("To install: \n1. Tap the Share/Menu button \n2. Select 'Add to Home Screen'");
     }
   };
 
@@ -236,7 +261,10 @@ const App: React.FC = () => {
         {screen === 'language' && (
              <LanguageSelector 
                 onSelect={handleLanguageSelect} 
-                onInstall={handleUniversalInstall} 
+                // Only pass install handler if NOT already in standalone mode
+                onInstall={isStandalone ? undefined : handleUniversalInstall}
+                // Pass legal handler for footer links (Google Ads Requirement)
+                onOpenLegal={handleOpenLegal}
             />
         )}
         {screen === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} language={language} onOpenSettings={() => setShowSettings(true)} onGoHome={handleGoHome} />}
@@ -246,7 +274,7 @@ const App: React.FC = () => {
                 user={userProfile} 
                 partner={partnerProfile} 
                 isPro={isPro} 
-                proType={proType} // Added proType prop
+                proType={proType} 
                 oneTimePass={oneTimePass} 
                 onConsumeOneTimePass={consumeOneTimePass}
                 onBack={() => setScreen('partner')} 
@@ -274,7 +302,7 @@ const App: React.FC = () => {
             onClose={handleAdClose}
             onReward={handleAdRewardGranted}
             language={language}
-            mode="timer" // Ad reward mode (6s countdown then grant)
+            mode="timer" 
           />
       )}
       

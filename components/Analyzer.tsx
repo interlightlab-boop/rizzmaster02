@@ -23,16 +23,6 @@ interface AnalyzerProps {
   onInstallApp?: () => void;
 }
 
-// ==================================================================================
-// 🚨 [사장님 필독] 심사 통과 후 수익화 모드 전환 방법
-// ==================================================================================
-// 1. 현재 상태 (TRUE): [심사 제출용] 광고 없음, 기능 100% 무료, 심사관이 좋아함.
-// 2. 심사 통과 후: 아래 값을 false로 바꾸고 배포하세요.
-// 3. 변경 후 (FALSE): [돈 버는 모드] 광고 나옴, 프리미엄 기능 잠김.
-// ==================================================================================
-const IS_REVIEW_MODE = true; 
-// ==================================================================================
-
 export const Analyzer: React.FC<AnalyzerProps> = ({ 
   user, partner, isPro, proType, oneTimePass, onConsumeOneTimePass, onBack, language, onOpenSettings, onGoHome, onShowPaywall, installPrompt, onInstallApp
 }) => {
@@ -84,14 +74,14 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     if (!selectedImage) return;
 
     // --- LOADING & REVENUE LOGIC ---
+    // If IS_REVIEW_MODE is true in App.tsx, isPro passed here is TRUE.
     
-    // Check if user is a paid subscriber (Unlimited Pro)
-    const isSubscriber = isPro && proType === 'subscription';
+    // Check if user is a paid subscriber (Unlimited Pro) or has review mode enabled
+    const isSubscriber = isPro && (proType === 'subscription' || proType === 'none'); // 'none' + isPro means Review Mode usually
     
     // Determine if we should show the "Fake Loading / Ad Screen"
-    // Condition 1: Must NOT be in Review Mode (Money Making Mode active)
-    // Condition 2: Must NOT be a paid subscriber
-    const shouldShowAdLoading = !IS_REVIEW_MODE && !isSubscriber;
+    // Show Ad Loading ONLY IF user is NOT Pro.
+    const shouldShowAdLoading = !isPro;
     
     if (shouldShowAdLoading) {
         setShowFakeLoading(true);
@@ -103,7 +93,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     try {
       // Logic:
       // If we are showing the ad screen, wait 6 seconds (6000ms).
-      // If we are in Review Mode OR it's a paid user, 0ms delay.
+      // If it's a paid/review user, 0ms delay.
       const waitTime = shouldShowAdLoading ? 6000 : 0; 
       
       const minWaitPromise = new Promise(resolve => setTimeout(resolve, waitTime));
@@ -148,6 +138,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       return true;
   };
 
+  // Determines if the user has a "Premium/Gold" status (Subscription OR Review Mode)
+  const isGoldStatus = proType === 'subscription' || (isPro && proType === 'none');
+
   return (
     <div className="h-full w-full flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
       
@@ -162,10 +155,11 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       <div className="flex items-center justify-between mb-6 shrink-0">
         <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft /></button>
         <div className="flex items-center gap-2">
-            {(isPro || oneTimePass || IS_REVIEW_MODE) && (
-                <div className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border flex items-center gap-1 ${proType === 'subscription' ? 'bg-gradient-to-r from-yellow-600 to-orange-600 border-yellow-500/50 shadow-orange-500/30' : 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/50 shadow-cyan-500/30'}`}>
+            {(isPro || oneTimePass) && (
+                <div className={`px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg border flex items-center gap-1 ${isGoldStatus ? 'bg-gradient-to-r from-yellow-600 to-orange-600 border-yellow-500/50 shadow-orange-500/30' : 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/50 shadow-cyan-500/30'}`}>
                     <Sparkles className="w-3 h-3" /> 
-                    {IS_REVIEW_MODE ? "REVIEW MODE" : (proType === 'subscription' ? "PRO" : (isPro ? "PRO (1H)" : "UNLOCKED"))}
+                    {/* Display 'PRO' for Review Mode users to act as paid users */}
+                    {proType === 'share' ? "PRO (1H)" : (oneTimePass ? "UNLOCKED" : "PRO")}
                 </div>
             )}
             <button onClick={onGoHome} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors"><Home className="w-5 h-5" /></button>
@@ -204,8 +198,8 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 <div className="space-y-4">
                     {results.map((res, idx) => {
                         // UNLOCK LOGIC:
-                        // If IS_REVIEW_MODE is true, nothing is locked.
-                        const isLocked = !IS_REVIEW_MODE && (!isPro && !oneTimePass) && idx === 2;
+                        // If isPro is true (due to review mode OR subscription), nothing is locked.
+                        const isLocked = (!isPro && !oneTimePass) && idx === 2;
                         
                         return (
                             <div key={idx} onClick={() => isLocked ? onShowPaywall() : handleCopy(res.text, idx)} className={`relative border rounded-2xl p-5 transition-all overflow-hidden ${isLocked ? 'bg-slate-900 border-yellow-500/40 cursor-pointer shadow-2xl shadow-yellow-900/10 hover:border-yellow-400' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}`}>
