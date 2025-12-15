@@ -4,13 +4,14 @@ import { UserProfile, Gender, MBTI, Language } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 import { Button } from './Button';
 import { Input, Select } from './Input';
-import { Sparkles, Settings, Home } from 'lucide-react';
+import { Sparkles, Settings, Home, UserCog } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
   language: Language;
   onOpenSettings: () => void;
   onGoHome: () => void;
+  initialData?: UserProfile | null;
 }
 
 const mbtiGroups = [
@@ -20,14 +21,15 @@ const mbtiGroups = [
   { name: 'Explorers', color: 'bg-yellow-500', border: 'border-yellow-500', text: 'text-yellow-400', types: [MBTI.ISTP, MBTI.ISFP, MBTI.ESTP, MBTI.ESFP] },
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, onOpenSettings, onGoHome }) => {
-  const [formData, setFormData] = useState<UserProfile>({
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, onOpenSettings, onGoHome, initialData }) => {
+  const [formData, setFormData] = useState<UserProfile>(initialData || {
     gender: Gender.Male,
     age: 25,
     mbti: MBTI.ENFP,
   });
 
   const t = TRANSLATIONS[language];
+  const isEditing = !!initialData;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +63,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, on
 
       <div className="w-full max-w-md space-y-6 my-8 min-h-full flex flex-col justify-center">
         <div className="text-center space-y-2 mt-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-600 mb-2 shadow-xl shadow-purple-500/20">
-            <Sparkles className="w-8 h-8 text-white" />
+          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-tr ${isEditing ? 'from-emerald-500 to-teal-600' : 'from-cyan-500 to-purple-600'} mb-2 shadow-xl shadow-purple-500/20`}>
+            {isEditing ? <UserCog className="w-8 h-8 text-white" /> : <Sparkles className="w-8 h-8 text-white" />}
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            {t.welcome}
+            {isEditing ? t.edit_profile : t.welcome}
           </h1>
           <p className="text-slate-400 text-sm">
-            {t.welcome_desc}
+            {isEditing ? "Update your personality details" : t.welcome_desc}
           </p>
         </div>
 
@@ -130,7 +132,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, language, on
           </div>
 
           <Button type="submit" fullWidth className="mt-4">
-            {t.start_btn}
+            {isEditing ? t.update_btn : t.start_btn}
           </Button>
         </form>
       </div>

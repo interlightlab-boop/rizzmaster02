@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Globe, Shield, FileText, Trash2, Mail, Download, Code, Check, Clock, Share2, Zap } from 'lucide-react';
+import { X, Globe, Shield, FileText, Trash2, Mail, Download, Code, Check, Share2, Zap, User } from 'lucide-react';
 import { Language } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 
@@ -17,6 +17,7 @@ interface SettingsModalProps {
   onTogglePro: () => void;
   proExpiry?: number;
   proType?: 'none' | 'share' | 'subscription' | 'ad_reward';
+  onEditProfile: () => void; // New Prop
 }
 
 // Order based on Ad Revenue (CPM) & User Base Size
@@ -43,7 +44,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isPro,
   onTogglePro,
   proExpiry = 0,
-  proType = 'none'
+  proType = 'none',
+  onEditProfile
 }) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
 
@@ -119,6 +121,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
               </div>
           )}
+          
+          {/* Account Section - NEW */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+              <User className="w-4 h-4" /> {t.my_account}
+            </h3>
+            <button
+                onClick={onEditProfile}
+                className="w-full flex items-center justify-between p-3 bg-slate-800 rounded-xl hover:bg-slate-750 text-slate-300 hover:text-white transition-colors border border-slate-700 hover:border-slate-500"
+            >
+                <span className="flex items-center gap-2 text-sm font-medium">
+                     {t.edit_profile}
+                </span>
+                <span className="bg-slate-700 p-1 rounded-full"><Code className="w-3 h-3 rotate-45" /></span>
+            </button>
+          </div>
+          
+          <hr className="border-slate-800" />
 
           {/* PWA Install Button (Only if available) */}
           {installPrompt && onInstallApp && (

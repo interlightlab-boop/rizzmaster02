@@ -158,11 +158,6 @@ const App: React.FC = () => {
     setScreen('partner');
   };
 
-  const handlePartnerNext = (partner: PartnerProfile) => {
-    setPartnerProfile(partner);
-    setScreen('analyzer');
-  };
-
   // --- REWARD LOGIC ---
   const grantTimeBasedReward = (type: ProType, durationMs: number) => {
       const newExpiry = Date.now() + durationMs;
@@ -243,6 +238,11 @@ const App: React.FC = () => {
       setShowSettings(false);
       setShowLegal(true);
   };
+  
+  const handleEditProfile = () => {
+      setShowSettings(false);
+      setScreen('onboarding');
+  };
 
   const handleTogglePro = () => {
     if (isPro) {
@@ -253,6 +253,11 @@ const App: React.FC = () => {
     } else {
         grantTimeBasedReward('subscription', 60 * 60 * 1000);
     }
+  };
+
+  const handlePartnerNext = (partner: PartnerProfile) => {
+    setPartnerProfile(partner);
+    setScreen('analyzer');
   };
 
   return (
@@ -267,7 +272,15 @@ const App: React.FC = () => {
                 onOpenLegal={handleOpenLegal}
             />
         )}
-        {screen === 'onboarding' && <Onboarding onComplete={handleOnboardingComplete} language={language} onOpenSettings={() => setShowSettings(true)} onGoHome={handleGoHome} />}
+        {screen === 'onboarding' && (
+            <Onboarding 
+                onComplete={handleOnboardingComplete} 
+                language={language} 
+                onOpenSettings={() => setShowSettings(true)} 
+                onGoHome={handleGoHome}
+                initialData={userProfile} 
+            />
+        )}
         {screen === 'partner' && <PartnerSetup onBack={() => setScreen('onboarding')} onNext={handlePartnerNext} language={language} onOpenSettings={() => setShowSettings(true)} isPro={isPro} onShowPaywall={() => setShowPaywall(true)} onGoHome={handleGoHome} />}
         {screen === 'analyzer' && userProfile && partnerProfile && (
             <Analyzer 
@@ -325,6 +338,7 @@ const App: React.FC = () => {
         onTogglePro={handleTogglePro}
         proExpiry={proExpiry} 
         proType={proType}
+        onEditProfile={handleEditProfile}
       />
     </div>
   );
