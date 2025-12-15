@@ -13,8 +13,8 @@ export const InstallGuide: React.FC<InstallGuideProps> = ({ onClose, language })
   
   if (!isIOS) return null;
 
-  // Embedded SVG Icon (Purple Gradient)
-  const APP_ICON_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM3YzNhZWQiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0ZjQ2ZTUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyOCIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0zNTIgMTI4SDE2MGMtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTkyYzAgMTcuNyAxNC4zIDMyIDMyIDMyaDU4LjVsNDAuNiA1MC44YzQuNSA1LjYgMTMuMSA1LjYgMTcuNiAwbDQwLjYtNTAuOEgzNTJjMTcuNyAwIDMyLTE0LjMgMzItMzJWMTYwYzAtMTcuNy0xNC4zLTMyLTMyLTMyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjA4IDIwOGgzMm0zMiAwaDMyIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMzIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==";
+  // Link directly to the public icon file so it's always up to date
+  const APP_ICON_URL = "/icon.svg";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">

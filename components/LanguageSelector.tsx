@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Language } from '../types';
-import { MessageCircle, Sparkles, PlusSquare, Zap, BrainCircuit, ShieldCheck, FileText } from 'lucide-react';
+import { PlusSquare, Zap, BrainCircuit, ShieldCheck, FileText, Sparkles } from 'lucide-react';
 
 interface LanguageSelectorProps {
   onSelect: (lang: Language) => void;
@@ -53,8 +53,22 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onSelect, on
                 {/* Logo Icon with Glow */}
                 <div className="relative group transform hover:scale-105 transition-transform duration-500">
                     <div className="absolute -inset-4 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition duration-1000"></div>
-                    <div className="relative w-24 h-24 bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] rounded-3xl border border-white/10 flex items-center justify-center shadow-2xl ring-1 ring-white/5">
-                         <MessageCircle className="w-12 h-12 text-white fill-purple-500/10 stroke-[1.5px]" />
+                    <div className="relative w-28 h-28 bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] rounded-3xl border border-white/10 flex items-center justify-center shadow-2xl ring-1 ring-white/5">
+                         {/* Custom SVG mirroring the App Icon */}
+                         <svg width="64" height="64" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+                             <defs>
+                                <linearGradient id="textGradInline" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#c084fc"/>
+                                    <stop offset="50%" stopColor="#f472b6"/>
+                                    <stop offset="100%" stopColor="#818cf8"/>
+                                </linearGradient>
+                             </defs>
+                             {/* Dark Bubble Body - Synced exactly with icon.svg (stroke 12, opacity 0.15) */}
+                             <path fill="#0f172a" stroke="rgba(255,255,255,0.15)" strokeWidth="12" d="M256 32C114.6 32 0 125.1 0 240c0 49.6 21.4 95 57 130.7C44.5 421.1 2.7 466 2.2 466.5c-2.2 2.3-2.8 5.7-1.5 8.7S4.8 480 8 480c66.3 0 116-31.8 140.6-51.4 32.7 12.3 69 19.4 107.4 19.4 141.4 0 256-93.1 256-208S397.4 32 256 32z"/>
+                             {/* Gradient Text */}
+                             <text x="256" y="285" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="900" fontSize="130" fill="url(#textGradInline)" letterSpacing="-4">MBTI</text>
+                         </svg>
+                         
                          <div className="absolute -top-1 -right-1 bg-white rounded-full p-1.5 shadow-[0_0_15px_rgba(255,255,255,0.5)]">
                             <Sparkles className="w-4 h-4 text-purple-600 fill-purple-600 animate-pulse" />
                          </div>
