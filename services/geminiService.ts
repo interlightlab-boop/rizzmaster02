@@ -43,16 +43,11 @@ const cleanJson = (text: string): string => {
   return cleaned;
 };
 
-// 🚨 PRIORITY QUEUE FOR MODELS (Fallback System)
-// 1. Gemini 2.0 Flash Lite (Specific Date) - Requested Priority
-// 2. Gemini 2.0 Flash Lite (Generic Preview) - Backup if specific date fails 404
-// 3. Gemini 2.0 Flash (Smart Backup)
-// 4. Gemini 1.5 Flash (Reliable Old Faithful)
+// 🚨 PRIORITY QUEUE FOR MODELS (Strict Cost Control)
+// User specifically requested "2.5 flash lite" (mapped to 'gemini-flash-lite-latest').
+// Removed expensive models (like gemini-2.5-flash) to prevent high costs.
 const MODELS_TO_TRY = [
-    "gemini-2.0-flash-lite-preview-02-05", 
-    "gemini-2.0-flash-lite-preview",
-    "gemini-2.0-flash", 
-    "gemini-1.5-flash"
+    "gemini-flash-lite-latest"
 ];
 
 export const generateRizzSuggestions = async (
