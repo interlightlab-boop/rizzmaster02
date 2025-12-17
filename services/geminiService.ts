@@ -22,7 +22,7 @@ const RESPONSE_SCHEMA: Schema = {
         properties: {
           tone: { type: Type.STRING, description: "The tone of the reply (e.g., Witty, Sweet, Chill) in the User's UI language." },
           text: { type: Type.STRING, description: "The actual reply text suggestions in the PARTNER'S language. MUST be detailed, engaging, and longer than generic AI responses (2-4 sentences)." },
-          translation: { type: Type.STRING, description: "Translation of the reply text into the User's UI language. NULL if languages match." },
+          translation: { type: Type.STRING, description: "MANDATORY if languages differ: Translate the reply 'text' into the User's UI language. If languages match, return NULL." },
           explanation: { type: Type.STRING, description: "Psychological explanation strictly in the User's UI language. NEVER use the partner's language here." },
         },
         required: ["tone", "text", "explanation"],
@@ -44,11 +44,13 @@ const cleanJson = (text: string): string => {
 };
 
 // 🚨 PRIORITY QUEUE FOR MODELS (Fallback System)
-// 1. Gemini 2.0 Flash Lite (Cost King: $0.10/$0.40) - Requested as "2.5 Flash Lite"
-// 2. Gemini 2.0 Flash (Smart Backup)
-// 3. Gemini 1.5 Flash (Reliable Old Faithful)
+// 1. Gemini 2.0 Flash Lite (Specific Date) - Requested Priority
+// 2. Gemini 2.0 Flash Lite (Generic Preview) - Backup if specific date fails 404
+// 3. Gemini 2.0 Flash (Smart Backup)
+// 4. Gemini 1.5 Flash (Reliable Old Faithful)
 const MODELS_TO_TRY = [
     "gemini-2.0-flash-lite-preview-02-05", 
+    "gemini-2.0-flash-lite-preview",
     "gemini-2.0-flash", 
     "gemini-1.5-flash"
 ];
@@ -80,9 +82,9 @@ export const generateRizzSuggestions = async (
     let translationInstruction = "";
 
     if (isSameLanguage) {
-        translationInstruction = `C. **TRANSLATION ('translation' field)**: CRITICAL - OMIT THIS FIELD OR RETURN NULL. The user and partner speak the same language (${userLangName}). Do NOT generate a translation.`;
+        translationInstruction = `C. **TRANSLATION ('translation' field)**: OMIT THIS FIELD OR RETURN NULL. User and Partner share the language (${userLangName}). Translation is redundant.`;
     } else {
-        translationInstruction = `C. **TRANSLATION ('translation' field)**: MANDATORY. Translate the reply text into **${userLangName}** (${language}) so the user understands what they are sending.`;
+        translationInstruction = `C. **TRANSLATION ('translation' field)**: 🔴 **STRICTLY REQUIRED**. User speaks **${userLangName}** but Partner speaks **${partnerLangName}**. You MUST provide a clear translation of the 'text' into **${userLangName}** so the user understands the reply.`;
     }
 
     // --- Strict Politeness Logic ---
@@ -127,12 +129,12 @@ export const generateRizzSuggestions = async (
       - **HOOKS:** End with a question, a challenge, or a playful assumption. Don't just make a statement.
       - **EMOJIS:** Use 1-2 relevant emojis to set the tone.
 
-      **4. LANGUAGE RULES:**
-      A. **REPLY TEXT**: Must be in **${partnerLangName}** (${partner.language}). Natural, native-speaker level.
-      B. **EXPLANATION**: Must be in **${userLangName}** (${language}).
+      **4. LANGUAGE RULES (STRICTLY FOLLOW):**
+      A. **REPLY TEXT**: Generates replies in **${partnerLangName}** (${partner.language}). MUST be natural and culturally appropriate for ${partnerLangName}.
+      B. **EXPLANATION**: Analyze and explain in **${userLangName}** (${language}).
       ${translationInstruction}
       D. **POLITENESS**: ${politenessInstruction}
-      E. **ROAST**: Must be in **${userLangName}**. Be savage and funny about their chat skills or the situation.
+      E. **ROAST**: Write the roast in **${userLangName}**.
 
       **5. GENERATION STRATEGY:**
       
@@ -206,8 +208,10 @@ export const generateRizzSuggestions = async (
     }
     
     // If we get here, ALL models failed.
-    console.error("All AI models failed to generate response.");
-    throw lastError || new Error("Service busy. Please try again.");
+    console.error("All AI models failed to generate response. Last Error:", lastError);
+    // Explicitly throw "Service busy" or the actual error message so Analyzer.tsx can display it
+    const msg = lastError instanceof Error ? lastError.message : String(lastError);
+    throw new Error(`Service busy. Details: ${msg}`);
 
   } catch (error) {
     console.error("Gemini Service Error:", error);

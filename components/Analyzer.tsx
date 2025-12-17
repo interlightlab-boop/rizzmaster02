@@ -116,7 +116,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       let friendlyMsg = "";
 
       // Friendly Error Messages Logic
-      if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("limit")) {
+      if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("limit") || lowerMsg.includes("busy")) {
           friendlyMsg = language === 'ko' 
             ? "현재 이용자가 너무 많아 서버가 혼잡합니다. 잠시 후 다시 시도해주세요! (서버 과부하)" 
             : "Server traffic is extremely high right now. Please try again in a minute.";
@@ -124,6 +124,10 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
           friendlyMsg = language === 'ko'
             ? "인터넷 연결이 불안정하여 시간이 초과되었습니다. 다시 시도해주세요."
             : "Network timeout. Please check your connection and try again.";
+      } else if (lowerMsg.includes("key") || lowerMsg.includes("api")) {
+          friendlyMsg = language === 'ko' 
+            ? `시스템 설정 오류: ${errorMsg}` 
+            : `System Error: ${errorMsg}`;
       } else if (lowerMsg.includes("safety") || lowerMsg.includes("harmful") || lowerMsg.includes("blocked")) {
           friendlyMsg = language === 'ko'
             ? "이미지에서 안전하지 않은 콘텐츠가 감지되었습니다. 다른 사진을 사용해주세요."
@@ -133,10 +137,10 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
              ? "AI 응답을 해석하는데 실패했습니다. 다시 시도하면 해결될 수 있습니다."
              : "Failed to process AI response. Please try again.";
       } else {
-          // Generic fallback
+          // Generic fallback - Show the ACTUAL error to help debugging
           friendlyMsg = language === 'ko'
-            ? "오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-            : `Error: ${errorMsg.substring(0, 100)}...`;
+            ? `오류가 발생했습니다: ${errorMsg}`
+            : `Error: ${errorMsg}`;
       }
 
       alert(friendlyMsg);
@@ -362,7 +366,6 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   // 4. Initial State (Upload Screen)
   return (
-    // Added overflow-y-auto to the main container
     <div className="h-full w-full flex flex-col p-4 animate-in slide-in-from-right duration-300 overflow-y-auto">
       <div className="flex items-center justify-between mb-4 shrink-0">
          <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white">
@@ -378,27 +381,22 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
          </div>
       </div>
 
-      {/* Changed justify-center to justify-start to avoid pushing content off-screen */}
-      <div className="flex-1 flex flex-col items-center justify-start space-y-6">
+      <div className="flex-1 flex flex-col items-center justify-center space-y-6 pb-10">
         
-        {/* Title shrinks when image is selected */}
-        <div className={`text-center space-y-2 transition-all duration-300 ${selectedImage ? 'scale-90 mt-0 opacity-80' : 'mt-10'}`}>
-          <div className="w-20 h-20 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20 mb-4 rotate-3 transform hover:rotate-6 transition-transform">
-             <ImageIcon className="w-10 h-10 text-white" />
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20 mb-3 rotate-3 transform hover:rotate-6 transition-transform">
+             <ImageIcon className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
+          <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
             {t.upload_title}
           </h2>
-          {/* Hide description when image is selected to save space */}
-          {!selectedImage && (
-              <p className="text-slate-400 text-sm max-w-[280px] mx-auto leading-relaxed">
-                {t.upload_desc}
-              </p>
-          )}
+          <p className="text-slate-400 text-xs max-w-[280px] mx-auto leading-relaxed">
+            {t.upload_desc}
+          </p>
         </div>
 
-        {/* Dynamic Image Container: Switches from Aspect Ratio to Fixed Height when selected */}
-        <div className={`w-full max-w-xs relative group cursor-pointer transition-all duration-500 ${selectedImage ? 'h-72' : 'aspect-[9/16]'}`}>
+        {/* Resized Upload Box: Reduced from 320px to 220px to fit screens better */}
+        <div className="w-full max-w-[220px] aspect-[9/16] relative group cursor-pointer shadow-2xl shadow-purple-900/20 rounded-3xl">
           <input
             ref={fileInputRef}
             type="file"
@@ -409,7 +407,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
           
           <div 
             onClick={() => fileInputRef.current?.click()}
-            className={`w-full h-full rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center gap-4 relative overflow-hidden ${
+            className={`w-full h-full rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center gap-3 relative overflow-hidden ${
                 selectedImage 
                 ? 'border-purple-500 bg-slate-900' 
                 : 'border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-purple-500/50'
@@ -428,22 +426,22 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
               </>
             ) : (
                <>
-                 <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-                    <ImageIcon className="w-8 h-8 text-slate-500 group-hover:text-purple-400 transition-colors" />
+                 <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                    <ImageIcon className="w-7 h-7 text-slate-500 group-hover:text-purple-400 transition-colors" />
                  </div>
-                 <span className="text-sm font-bold text-slate-500 group-hover:text-purple-300 transition-colors">{t.tap_upload}</span>
+                 <span className="text-xs font-bold text-slate-500 group-hover:text-purple-300 transition-colors">{t.tap_upload}</span>
                </>
             )}
           </div>
         </div>
 
         {selectedImage && (
-          <div className="w-full max-w-xs animate-in slide-in-from-bottom-4 duration-500 pb-10">
+          <div className="w-full max-w-[240px] animate-in slide-in-from-bottom-4 duration-500 pt-2">
             <Button 
                 onClick={handleAnalyze} 
                 fullWidth 
                 disabled={isAnalyzing}
-                className="py-4 text-lg shadow-purple-500/25"
+                className="py-3 text-base shadow-purple-500/25"
             >
                {isAnalyzing ? t.analyzing_btn : t.analyze_btn}
             </Button>
