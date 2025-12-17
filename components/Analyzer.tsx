@@ -362,8 +362,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   // 4. Initial State (Upload Screen)
   return (
-    <div className="h-full w-full flex flex-col p-4 animate-in slide-in-from-right duration-300">
-      <div className="flex items-center justify-between mb-6 shrink-0">
+    // Added overflow-y-auto to the main container
+    <div className="h-full w-full flex flex-col p-4 animate-in slide-in-from-right duration-300 overflow-y-auto">
+      <div className="flex items-center justify-between mb-4 shrink-0">
          <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white">
             <ArrowLeft />
          </button>
@@ -377,21 +378,27 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
          </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+      {/* Changed justify-center to justify-start to avoid pushing content off-screen */}
+      <div className="flex-1 flex flex-col items-center justify-start space-y-6">
         
-        <div className="text-center space-y-2">
+        {/* Title shrinks when image is selected */}
+        <div className={`text-center space-y-2 transition-all duration-300 ${selectedImage ? 'scale-90 mt-0 opacity-80' : 'mt-10'}`}>
           <div className="w-20 h-20 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-purple-500/20 mb-4 rotate-3 transform hover:rotate-6 transition-transform">
              <ImageIcon className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
             {t.upload_title}
           </h2>
-          <p className="text-slate-400 text-sm max-w-[280px] mx-auto leading-relaxed">
-            {t.upload_desc}
-          </p>
+          {/* Hide description when image is selected to save space */}
+          {!selectedImage && (
+              <p className="text-slate-400 text-sm max-w-[280px] mx-auto leading-relaxed">
+                {t.upload_desc}
+              </p>
+          )}
         </div>
 
-        <div className="w-full max-w-xs aspect-[9/16] relative group cursor-pointer">
+        {/* Dynamic Image Container: Switches from Aspect Ratio to Fixed Height when selected */}
+        <div className={`w-full max-w-xs relative group cursor-pointer transition-all duration-500 ${selectedImage ? 'h-72' : 'aspect-[9/16]'}`}>
           <input
             ref={fileInputRef}
             type="file"
@@ -431,7 +438,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
         </div>
 
         {selectedImage && (
-          <div className="w-full max-w-xs animate-in slide-in-from-bottom-4 duration-500">
+          <div className="w-full max-w-xs animate-in slide-in-from-bottom-4 duration-500 pb-10">
             <Button 
                 onClick={handleAnalyze} 
                 fullWidth 
