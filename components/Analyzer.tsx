@@ -34,7 +34,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   
-  // State for the Fake Loading Screen
+  // State for the Fake Loading Screen (Ad Version)
   const [showFakeLoading, setShowFakeLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,14 +74,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     if (!selectedImage) return;
 
     // --- LOADING & REVENUE LOGIC ---
-    // If IS_REVIEW_MODE is true in App.tsx, isPro passed here is TRUE.
-    
-    // Check if user is a paid subscriber (Unlimited Pro) or has review mode enabled
-    const isSubscriber = isPro && (proType === 'subscription' || proType === 'none'); // 'none' + isPro means Review Mode usually
-    
-    // Determine if we should show the "Fake Loading / Ad Screen"
-    // Show Ad Loading ONLY IF user is NOT Pro.
-    const shouldShowAdLoading = !isPro;
+    // Pro status includes subscription, review mode override, or one-time pass active
+    const isProUser = isPro || oneTimePass;
+    const shouldShowAdLoading = !isProUser;
     
     if (shouldShowAdLoading) {
         setShowFakeLoading(true);
@@ -91,20 +86,30 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     setResults(null); 
     
     try {
-      // Logic:
-      // If we are showing the ad screen, wait 6 seconds (6000ms).
-      // If it's a paid/review user, 0ms delay.
       const waitTime = shouldShowAdLoading ? 6000 : 0; 
       
       const minWaitPromise = new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // TIMEOUT LOGIC: Fail if API takes longer than 25 seconds
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout: AI is taking too long.")), 25000)
+      );
+
       const apiPromise = generateRizzSuggestions(user, partner, selectedImage, mimeType, language);
 
-      const [_, result] = await Promise.all([minWaitPromise, apiPromise]);
+      // Race against timeout
+      const [_, result] = await Promise.all([
+          minWaitPromise, 
+          Promise.race([apiPromise, timeoutPromise])
+      ]) as [any, any]; // Casting to handle the race result
       
       setResults(result.replies);
     } catch (error: any) {
       console.error(error);
-      alert(`${error.message}`);
+      alert(error.message === "Timeout: AI is taking too long." 
+        ? "Network is slow. Please try again." 
+        : `Error: ${error.message}`
+      );
     } finally { 
         setShowFakeLoading(false);
         setIsAnalyzing(false); 
@@ -138,18 +143,46 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       return true;
   };
 
-  // Determines if the user has a "Premium/Gold" status (Subscription OR Review Mode)
   const isGoldStatus = proType === 'subscription' || (isPro && proType === 'none');
 
   return (
     <div className="h-full w-full flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
       
-      {/* Fake Loading Overlay (Ads + Analyzing UI) */}
+      {/* Fake Loading Overlay (Ads + Analyzing UI) - FOR FREE USERS */}
       {showFakeLoading && (
           <InterstitialAd 
             language={language}
             mode="processing"
           />
+      )}
+
+      {/* PRO Loading Overlay - FOR PRO USERS (No Ad, Just Status) */}
+      {isAnalyzing && !showFakeLoading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="w-full max-w-xs flex flex-col items-center p-6 text-center">
+                {/* Spinning Icon */}
+                <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center mb-6 relative shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                    <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-purple-500 animate-spin"></div>
+                    <Sparkles className="w-10 h-10 text-purple-400 animate-pulse" />
+                </div>
+
+                {/* Text */}
+                <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">
+                    {language === 'ko' ? '답변 생성 중...' : t.analyzing_btn}
+                </h2>
+                <p className="text-sm text-slate-400 mb-8 leading-relaxed">
+                     {language === 'ko' ? 'AI가 최고의 플러팅을 분석하고 있습니다.' : 'Analyzing psychological vectors...'}
+                </p>
+
+                {/* Gauge Bar */}
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden relative border border-slate-700">
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 animate-[shimmer_1.5s_infinite]"></div>
+                </div>
+                <div className="mt-2 text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                    Pro Processing
+                </div>
+            </div>
+        </div>
       )}
 
       <div className="flex items-center justify-between mb-6 shrink-0">
@@ -198,8 +231,12 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 <div className="space-y-4">
                     {results.map((res, idx) => {
                         // UNLOCK LOGIC:
-                        // If isPro is true (due to review mode OR subscription), nothing is locked.
-                        const isLocked = (!isPro && !oneTimePass) && idx === 2;
+                        // If isPro is true (due to review mode OR subscription OR onetime pass), nothing is locked.
+                        // Wait, logic check: 'isPro' prop passed from App.tsx includes subscription & review mode.
+                        // 'oneTimePass' is passed separately.
+                        // We need to combine them to check if the user has access.
+                        const hasAccess = isPro || oneTimePass;
+                        const isLocked = !hasAccess && idx === 2;
                         
                         return (
                             <div key={idx} onClick={() => isLocked ? onShowPaywall() : handleCopy(res.text, idx)} className={`relative border rounded-2xl p-5 transition-all overflow-hidden ${isLocked ? 'bg-slate-900 border-yellow-500/40 cursor-pointer shadow-2xl shadow-yellow-900/10 hover:border-yellow-400' : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'}`}>

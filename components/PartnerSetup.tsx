@@ -4,7 +4,7 @@ import { PartnerProfile, Gender, MBTI, Language } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 import { Button } from './Button';
 import { Input, Select } from './Input';
-import { ArrowLeft, UserPlus, Settings, BrainCircuit, HelpCircle, Lock, Home } from 'lucide-react';
+import { ArrowLeft, UserPlus, Settings, BrainCircuit, HelpCircle, Lock, Home, X, Trash2 } from 'lucide-react';
 
 interface PartnerSetupProps {
   onBack: () => void;
@@ -46,6 +46,9 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
   const t = TRANSLATIONS[language];
   const [savedPartners, setSavedPartners] = useState<PartnerProfile[]>([]);
   
+  // State for the custom delete confirmation modal
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  
   // Initialize MBTI as null (using 'as any' to bypass strict type for the initial unselected state)
   const [formData, setFormData] = useState<PartnerProfile>({
     id: '',
@@ -86,6 +89,30 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
 
       setSavedPartners(newPartners);
       localStorage.setItem(STORAGE_KEY_PARTNERS, JSON.stringify(newPartners));
+  };
+
+  const handleInitiateDelete = (e: React.MouseEvent, partnerId: string) => {
+      e.stopPropagation(); 
+      e.preventDefault();
+      // Instead of window.confirm, set the state to show the custom modal
+      setDeleteCandidateId(partnerId);
+  };
+
+  const confirmDelete = () => {
+      if (!deleteCandidateId) return;
+
+      const newPartners = savedPartners.filter(p => p.id !== deleteCandidateId);
+      setSavedPartners(newPartners);
+      localStorage.setItem(STORAGE_KEY_PARTNERS, JSON.stringify(newPartners));
+      
+      if (formData.id === deleteCandidateId) {
+         handleNewPartner(); 
+      }
+      setDeleteCandidateId(null);
+  };
+
+  const cancelDelete = () => {
+      setDeleteCandidateId(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -202,7 +229,7 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
   const isCustomVibe = !standardVibes.includes(formData.vibe);
 
   return (
-    <div className="h-full w-full flex flex-col p-4 max-w-md mx-auto animate-in slide-in-from-right duration-500">
+    <div className="h-full w-full flex flex-col p-4 max-w-md mx-auto animate-in slide-in-from-right duration-500 relative">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center">
             <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:text-white">
@@ -230,10 +257,12 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
 
       <div className="mb-6 shrink-0">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">{t.saved_partners}</h3>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        {/* Increased pt-3 to pt-5 to fix clipping issue of the delete button */}
+        <div className="flex gap-4 overflow-x-auto pb-2 pt-5 scrollbar-hide px-2">
             <button 
                 onClick={handleNewPartner}
-                className={`flex flex-col items-center gap-2 min-w-[70px] p-2 rounded-xl border border-dashed border-slate-600 hover:bg-slate-800 transition-colors
+                style={{ zIndex: 100 }} // Keep new button on top
+                className={`flex flex-col items-center gap-2 min-w-[70px] p-2 rounded-xl border border-dashed border-slate-600 hover:bg-slate-800 transition-colors shrink-0
                     ${!formData.id ? 'bg-purple-500/10 border-purple-500' : ''}
                 `}
             >
@@ -243,23 +272,37 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
                 <span className="text-xs font-medium text-slate-300 truncate w-full text-center">{t.new_partner}</span>
             </button>
 
-            {savedPartners.map(p => (
-                <button 
-                    key={p.id}
-                    onClick={() => handleSelectPartner(p)}
-                    className={`flex flex-col items-center gap-2 min-w-[70px] p-2 rounded-xl border transition-all
-                        ${formData.id === p.id 
-                            ? 'bg-purple-600/20 border-purple-500' 
-                            : 'bg-slate-800 border-slate-700 hover:border-slate-500'}
-                    `}
+            {savedPartners.map((p, index) => (
+                <div 
+                    key={p.id} 
+                    className="relative group shrink-0" 
+                    // Stacking order: Earlier items higher z-index so delete button is clickable
+                    style={{ zIndex: 50 - index }} 
                 >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                        {p.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs font-medium text-slate-300 truncate w-full text-center max-w-[60px]">
-                        {p.name}
-                    </span>
-                </button>
+                    <button 
+                        onClick={() => handleSelectPartner(p)}
+                        className={`flex flex-col items-center gap-2 min-w-[70px] p-2 rounded-xl border transition-all
+                            ${formData.id === p.id 
+                                ? 'bg-purple-600/20 border-purple-500' 
+                                : 'bg-slate-800 border-slate-700 hover:border-slate-500'}
+                        `}
+                    >
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                            {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-xs font-medium text-slate-300 truncate w-full text-center max-w-[60px]">
+                            {p.name}
+                        </span>
+                    </button>
+                    {/* Delete Badge - Size increased to w-8 h-8 (32px) for better hit target */}
+                    <button
+                        type="button"
+                        onClick={(e) => handleInitiateDelete(e, p.id)}
+                        className="absolute -top-3 -right-2 bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-slate-900 border border-slate-600 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors cursor-pointer z-50"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
             ))}
         </div>
       </div>
@@ -524,6 +567,37 @@ export const PartnerSetup: React.FC<PartnerSetupProps> = ({ onBack, onNext, lang
           {t.next_upload}
         </Button>
       </form>
+
+      {/* CUSTOM DELETE CONFIRMATION MODAL */}
+      {deleteCandidateId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700 w-full max-w-xs rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Trash2 className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-white">{t.delete_partner}</h3>
+                    <p className="text-slate-400 text-sm mt-1">
+                        Are you sure you want to remove this profile?
+                    </p>
+                </div>
+                <div className="flex gap-3 mt-4">
+                    <button 
+                        onClick={cancelDelete}
+                        className="flex-1 py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-sm hover:bg-slate-700 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="flex-1 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/50 font-bold text-sm hover:bg-red-500/20 transition-colors shadow-lg shadow-red-900/20"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Language } from '../types';
-import { PlusSquare, Zap, BrainCircuit, ShieldCheck, FileText, Sparkles } from 'lucide-react';
+import { PlusSquare, Zap, BrainCircuit, ShieldCheck, FileText, Sparkles, Heart, MessageCircle, ChevronDown } from 'lucide-react';
 
 interface LanguageSelectorProps {
   onSelect: (lang: Language) => void;
@@ -115,50 +115,109 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onSelect, on
                 </div>
             </div>
 
-            {/* VISIBLE SEO & GOOGLE ADS COMPLIANCE CONTENT */}
-            <article className="w-full mt-8 p-6 bg-slate-900/50 rounded-3xl border border-white/5 text-center space-y-6 backdrop-blur-sm">
-                <div className="space-y-2">
-                    <h2 className="text-lg font-bold text-white flex items-center justify-center gap-2">
-                        <BrainCircuit className="w-5 h-5 text-purple-400" />
-                        How It Works
+            {/* ========================================================================================= */}
+            {/* 📝 VISIBLE CONTENT FOR ADSENSE APPROVAL (Valuable Inventory) */}
+            {/* ========================================================================================= */}
+            <article className="w-full mt-12 space-y-12 pb-10">
+                
+                {/* Section 1: Introduction */}
+                <section className="text-center space-y-4 px-2">
+                    <div className="inline-flex items-center gap-2 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
+                        <BrainCircuit className="w-4 h-4 text-purple-400" />
+                        <span className="text-xs font-bold text-purple-300 uppercase tracking-wide">The Science</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-100">
+                        Why use AI for Dating?
                     </h2>
-                    <p className="text-xs text-slate-400 leading-relaxed px-2">
-                        MBTI Rizz AI uses advanced psychology to analyze your chat screenshots. We generate the perfect reply tailored to your partner's personality type.
+                    <p className="text-sm text-slate-400 leading-relaxed text-left bg-slate-800/50 p-5 rounded-2xl border border-white/5">
+                        Modern dating is complex. <strong>MBTI Rizz AI</strong> leverages advanced Large Language Models (LLMs) and Myers-Briggs Type Indicator (MBTI) psychology to help you craft the perfect response. Whether you are talking to an Introvert (I) who needs space, or an Extrovert (E) who loves excitement, our AI tailors every word to resonate with their specific personality traits.
                     </p>
-                </div>
+                </section>
 
-                <div className="grid grid-cols-1 gap-3 text-left">
-                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                        <Zap className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                {/* Section 2: Features Grid */}
+                <section className="grid grid-cols-1 gap-4">
+                    <div className="bg-slate-800/30 p-5 rounded-2xl border border-white/5 flex gap-4 items-start">
+                        <div className="p-3 bg-pink-500/10 rounded-xl shrink-0">
+                            <Heart className="w-6 h-6 text-pink-400" />
+                        </div>
                         <div>
-                            <h3 className="font-bold text-slate-200 text-sm">Instant Rizz</h3>
-                            <p className="text-[11px] text-slate-500 leading-tight mt-1">Generate witty, charming replies in seconds using our Neural Engine.</p>
+                            <h3 className="font-bold text-white mb-1">Emotional Intelligence</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Our Neural Engine detects emotional undertones in chat screenshots. It identifies if your partner is being flirtatious, distant, or sarcastic, and suggests the optimal tone for your reply.
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                        <ShieldCheck className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+
+                    <div className="bg-slate-800/30 p-5 rounded-2xl border border-white/5 flex gap-4 items-start">
+                        <div className="p-3 bg-blue-500/10 rounded-xl shrink-0">
+                            <MessageCircle className="w-6 h-6 text-blue-400" />
+                        </div>
                         <div>
-                            <h3 className="font-bold text-slate-200 text-sm">Safe & Private</h3>
-                            <p className="text-[11px] text-slate-500 leading-tight mt-1">Your chats are analyzed anonymously and never stored on our servers.</p>
+                            <h3 className="font-bold text-white mb-1">Context Awareness</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Unlike generic chatbots, MBTI Rizz AI understands the visual context of your conversation. Upload screenshots from Tinder, Hinge, Instagram, or iMessage, and let the AI analyze the full dialogue history.
+                            </p>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                {/* CRITICAL FOR GOOGLE ADS: Visible Links to Privacy & Terms */}
+                {/* Section 3: MBTI Guide (Long Text for Crawler) */}
+                <section className="space-y-4">
+                    <h2 className="text-xl font-bold text-slate-100 px-2 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-yellow-400" />
+                        Mastering the MBTI Types
+                    </h2>
+                    <div className="bg-slate-900/50 rounded-2xl border border-white/10 p-6 space-y-6">
+                        <div>
+                            <h3 className="text-sm font-bold text-purple-300 mb-2">For Analysts (INTJ, INTP, ENTJ, ENTP)</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                These types value logic and intellect. Avoid small talk. Instead, challenge them with witty banter, interesting facts, or deep questions about their goals. Our AI generates "Intellectual" responses specifically for this group.
+                            </p>
+                        </div>
+                        <hr className="border-white/5" />
+                        <div>
+                            <h3 className="text-sm font-bold text-green-300 mb-2">For Diplomats (INFJ, INFP, ENFJ, ENFP)</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Connection and authenticity are key. They want to feel understood. Use our "Sweet" or "Deep" vibe settings to create replies that show empathy and emotional depth.
+                            </p>
+                        </div>
+                        <hr className="border-white/5" />
+                        <div>
+                            <h3 className="text-sm font-bold text-blue-300 mb-2">For Sentinels (ISTJ, ISFJ, ESTJ, ESFJ)</h3>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                They appreciate reliability and tradition. Be clear, direct, and respectful. The "Polite" mode in our app is perfect for making a good first impression with these stable personality types.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section 4: Privacy & Safety */}
+                <section className="bg-slate-800/50 rounded-2xl p-6 text-center space-y-3 border border-white/5">
+                    <ShieldCheck className="w-8 h-8 text-green-400 mx-auto" />
+                    <h3 className="font-bold text-white">Your Privacy Matters</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                        We believe in complete anonymity. Your chat screenshots are processed in real-time and are <strong>never stored</strong> on our servers. The analysis happens in a transient state, ensuring your private conversations remain private.
+                    </p>
+                </section>
+
+                {/* Footer Links (Ads Compliance) */}
                 {onOpenLegal && (
-                    <div className="pt-4 border-t border-white/5 flex flex-wrap justify-center gap-4">
-                        <button onClick={() => onOpenLegal('privacy')} className="text-[10px] text-slate-500 hover:text-white transition-colors flex items-center gap-1">
-                            <FileText className="w-3 h-3" /> Privacy Policy
-                        </button>
-                        <button onClick={() => onOpenLegal('terms')} className="text-[10px] text-slate-500 hover:text-white transition-colors flex items-center gap-1">
-                            <FileText className="w-3 h-3" /> Terms of Service
-                        </button>
+                    <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+                        <div className="flex flex-wrap justify-center gap-6">
+                            <button onClick={() => onOpenLegal('privacy')} className="text-xs text-slate-500 hover:text-white transition-colors flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5" /> Privacy Policy
+                            </button>
+                            <button onClick={() => onOpenLegal('terms')} className="text-xs text-slate-500 hover:text-white transition-colors flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5" /> Terms of Service
+                            </button>
+                        </div>
+                        <div className="text-[10px] text-slate-600">
+                            © 2025 Interlight Lab. All rights reserved.<br/>
+                            MBTI® is a registered trademark of the Myers-Briggs Type Indicator Foundation.
+                            <br/>This app is not affiliated with the MBTI Foundation.
+                        </div>
                     </div>
                 )}
-                
-                <div className="text-[9px] text-slate-600">
-                    <p>© 2025 MBTI Rizz AI. All rights reserved.</p>
-                </div>
             </article>
 
         </div>

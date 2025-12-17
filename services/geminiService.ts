@@ -14,7 +14,7 @@ const RESPONSE_SCHEMA: Schema = {
         type: Type.OBJECT,
         properties: {
           tone: { type: Type.STRING, description: "The tone of the reply (e.g., Witty, Sweet, Chill) in the User's UI language." },
-          text: { type: Type.STRING, description: "The actual reply text suggestions in the PARTNER'S language. MUST be detailed." },
+          text: { type: Type.STRING, description: "The actual reply text suggestions in the PARTNER'S language. MUST be detailed, engaging, and longer than generic AI responses." },
           translation: { type: Type.STRING, description: "Translation of the reply text into the User's UI language. NULL if languages match." },
           explanation: { type: Type.STRING, description: "Psychological explanation strictly in the User's UI language. NEVER use the partner's language here." },
         },
@@ -25,6 +25,18 @@ const RESPONSE_SCHEMA: Schema = {
   required: ["replies"],
 };
 
+// Helper to clean Markdown code blocks if the Lite model adds them
+const cleanJson = (text: string): string => {
+  let cleaned = text.trim();
+  // Remove ```json and ``` wrap if present
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  return cleaned;
+};
+
 export const generateRizzSuggestions = async (
   user: UserProfile,
   partner: PartnerProfile,
@@ -33,6 +45,11 @@ export const generateRizzSuggestions = async (
   language: Language
 ): Promise<RizzGenerationResult> => {
   try {
+    // Safety check for API Key
+    if (!process.env.API_KEY) {
+        throw new Error("API Key is missing. Check your .env file or build configuration.");
+    }
+
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Explicitly map language codes to full English names for the prompt
@@ -69,12 +86,6 @@ export const generateRizzSuggestions = async (
         } else if (partner.politeness === 'Polite') {
             politenessInstruction = "CRITICAL: You MUST use Keigo/Desu/Masu (Polite form).";
         }
-    } else if (partner.language === 'fr') {
-        if (partner.politeness === 'Casual') {
-            politenessInstruction = "CRITICAL: You MUST use 'Tu' (informal).";
-        } else if (partner.politeness === 'Polite') {
-            politenessInstruction = "CRITICAL: You MUST use 'Vous' (formal).";
-        }
     }
 
     // --- ENHANCED PROMPT LOGIC ---
@@ -85,12 +96,17 @@ export const generateRizzSuggestions = async (
       Analyze the attached chat screenshot and generate 3 distinct replies.
       You MUST roleplay as the User (Sender) and carefully target the Partner (Recipient) by synthesizing ALL provided profile data.
 
+      **CRITICAL INSTRUCTION ON LENGTH & QUALITY:**
+      The user explicitly wants **rich, detailed, and high-quality responses**. 
+      - **AVOID** generic, short, or robotic answers (e.g., "That's cool").
+      - **DO** elaborate, add wit, use emojis appropriately, and make the conversation engaging.
+      - Each reply should feel like a "Masterpiece" of social engineering.
+
       **1. THE SENDER (USER PROFILE):**
       - Gender: ${user.gender}
       - Age: ${user.age}
       - MBTI: ${user.mbti}
       *Constraint*: The replies MUST sound authentic to a ${user.gender} aged ${user.age} with ${user.mbti} personality.
-      (e.g., If User is Introverted, avoid overly loud/exclamatory phrasing. If Thinking, use logic/wit over raw emotion. If ${user.age} < 25, use Gen-Z slang if appropriate.)
 
       **2. THE RECIPIENT (PARTNER PROFILE):**
       - Name: ${partner.name}
@@ -101,40 +117,37 @@ export const generateRizzSuggestions = async (
       - Goal: ${partner.goal}
       - Desired Vibe: ${partner.vibe}
       - Context Hints: "${partner.context}"
-      *Constraint*: Target the cognitive functions of ${partner.mbti}. Consider the age gap (${user.age} vs ${partner.age || 'Unknown'}).
 
       **3. LANGUAGE RULES (CRITICAL):**
       A. **REPLY TEXT ('text' field)**: Must be in **${partnerLangName}** (${partner.language}). This is what the user sends to the partner.
-         - **STRICT PROHIBITION**: NEVER mention "MBTI", personality types (e.g. "INTJ", "ENFP"), or psychological terms in this text. The reply must sound 100% natural and organic. The partner must NOT know they are being analyzed.
-      B. **EXPLANATION ('explanation' field)**: Must be in **${userLangName}** (${language}). You are explaining the strategy TO THE USER. **DO NOT** write the explanation in ${partnerLangName}. You SHOULD mention MBTI/Psychology concepts here to explain *why* the reply is effective.
+         - **STRICT PROHIBITION**: NEVER mention "MBTI", personality types (e.g. "INTJ"), or psychological terms in this text. The reply must sound 100% natural.
+      B. **EXPLANATION ('explanation' field)**: Must be in **${userLangName}** (${language}). You are explaining the strategy TO THE USER.
       ${translationInstruction}
       D. **POLITENESS**: ${politenessInstruction}
 
       **4. GENERATION STRATEGY (The 3 Replies):**
       
       **Reply 1 (Safe & Steady):** 
-      - Length: 1-2 sentences.
-      - Strategy: Low risk, maintains flow, friendly but not desperate.
+      - **Length**: 3-4 full sentences.
+      - Strategy: Low risk but highly engaging. Validate their last message and pivot to a new topic or question.
       
       **Reply 2 (Playful/Witty):** 
-      - Length: 1-2 sentences.
-      - Strategy: Shows personality, uses the selected Vibe (${partner.vibe}), teases slightly if appropriate for the relation.
+      - **Length**: 3-4 full sentences.
+      - Strategy: Show distinct personality. Use the selected Vibe (${partner.vibe}) strongly. Be creative, teasing, or charming.
 
-      **Reply 3 (👑 THE MASTERPIECE - PREMIUM):**
-      - **CRITICAL INSTRUCTION**: This reply MUST be SIGNIFICANTLY longer, deeper, and higher quality than the others.
-      - **Length**: 3-5 sentences (approx 50-80 words). It should feel like a complete, charming thought or story.
+      **Reply 3 (👑 THE MASTERPIECE):**
+      - **CRITICAL INSTRUCTION**: This reply MUST be SIGNIFICANTLY longer and higher quality.
+      - **Length**: 5-8 sentences (Target 80-120 words). 
       - **Synthesis**: Explicitly combine User's ${user.mbti} strength with Partner's ${partner.mbti} weakness.
-        (e.g. If User is ENFP and Partner is INTJ: "Use your ENFP warmth to melt their INTJ shell, but respect their intellect.")
-      - **Content**: Intelligently weave in the Context Hints ("${partner.context}"). Do not just mention them; use them as a hook.
       - **Goal**: Laser-focus on achieving '${partner.goal}'.
       - **Tone Label**: Mark as "🔥 MASTERPIECE".
       
-      Output exactly 3 replies in the specified JSON schema.
+      Output exactly 3 replies in valid JSON format matching the schema.
     `;
 
-    // Use Gemini Flash-Lite for maximum profit margin ($0.075 / 1M input tokens)
+    // 🚨 [사장님 요청] GEMINI 2.0 FLASH LITE (가장 저렴한 모델) 사용
     const result = await ai.models.generateContent({
-      model: "gemini-flash-lite-latest", 
+      model: "gemini-2.0-flash-lite-preview-02-05", 
       contents: {
         role: "user",
         parts: [
@@ -145,43 +158,30 @@ export const generateRizzSuggestions = async (
       config: {
         responseMimeType: "application/json",
         responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.85, // Slightly higher creativity for the Masterpiece
+        temperature: 0.9, // Increased to 0.9 for maximum creativity and flair
       },
     });
 
     const usage = result.usageMetadata;
     if (usage) {
-        // Updated Pricing for Flash-Lite (Approximate)
-        const inputCost = (usage.promptTokenCount / 1000000) * 0.075;
-        const outputCost = (usage.candidatesTokenCount / 1000000) * 0.30;
-        const totalCostUSD = inputCost + outputCost;
-        const totalCostKRW = totalCostUSD * 1400; 
-
-        console.group("💰 Profit Margin Analysis (Gemini Flash-Lite)");
         console.log(`Tokens - Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}`);
-        console.log(`Cost (USD): $${totalCostUSD.toFixed(7)}`);
-        console.log(`Cost (KRW): ₩${totalCostKRW.toFixed(2)}`);
-        console.groupEnd();
     }
 
     if (result.text) {
-        return JSON.parse(result.text) as RizzGenerationResult;
+        try {
+            const cleanedText = cleanJson(result.text);
+            return JSON.parse(cleanedText) as RizzGenerationResult;
+        } catch (e) {
+            console.error("JSON Parse Error on Lite Model:", e);
+            console.log("Raw Text:", result.text);
+            throw new Error("AI analysis failed to format the response. Please try again.");
+        }
     }
     
-    throw new Error("No response text generated");
+    throw new Error("No response generated from AI.");
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Gemini API Error:", error);
-    
-    // Billing / Quota Error Handling
-    if (error.message?.includes('429') || error.message?.includes('quota')) {
-        throw new Error("Server is busy (Rate Limit). Please try again in a moment.");
-    }
-    
-    if (error.message?.includes('API_KEY')) {
-        throw new Error("System Configuration Error. Please contact support.");
-    }
-
-    throw new Error("Failed to analyze image. Please try a different photo.");
+    throw error;
   }
 };
