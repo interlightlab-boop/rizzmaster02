@@ -44,5 +44,7 @@ export interface RizzResponse {
 }
 
 export interface RizzGenerationResult {
+  rizzScore: number; // 0 to 100
+  roast: string; // Short 1-sentence analysis/roast of the situation
   replies: RizzResponse[];
 }

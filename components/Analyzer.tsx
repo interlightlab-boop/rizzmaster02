@@ -1,11 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { PartnerProfile, UserProfile, RizzResponse, Language } from '../types';
+import { PartnerProfile, UserProfile, RizzResponse, Language, RizzGenerationResult } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
 import { generateRizzSuggestions } from '../services/geminiService';
 import { Button } from './Button';
 import { InterstitialAd } from './InterstitialAd';
-import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X, Flame } from 'lucide-react';
 
 interface AnalyzerProps {
   user: UserProfile;
@@ -30,7 +30,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [mimeType] = useState<string>('image/jpeg');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [results, setResults] = useState<RizzResponse[] | null>(null);
+  const [resultData, setResultData] = useState<RizzGenerationResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   
@@ -40,11 +40,11 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (results && installPrompt) {
+    if (resultData && installPrompt) {
         const timer = setTimeout(() => setShowInstallBanner(true), 2000);
         return () => clearTimeout(timer);
     }
-  }, [results, installPrompt]);
+  }, [resultData, installPrompt]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,7 +62,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
           ctx?.drawImage(img, 0, 0, w, h);
           const compressed = canvas.toDataURL('image/jpeg', 0.5);
           setSelectedImage(compressed.split(',')[1]);
-          setResults(null); 
+          setResultData(null); 
         };
         img.src = event.target?.result as string;
       };
@@ -74,7 +74,6 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     if (!selectedImage) return;
 
     // --- LOADING & REVENUE LOGIC ---
-    // Pro status includes subscription, review mode override, or one-time pass active
     const isProUser = isPro || oneTimePass;
     const shouldShowAdLoading = !isProUser;
     
@@ -83,7 +82,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     }
     
     setIsAnalyzing(true); 
-    setResults(null); 
+    setResultData(null); 
     
     try {
       const waitTime = shouldShowAdLoading ? 6000 : 0; 
@@ -101,9 +100,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       const [_, result] = await Promise.all([
           minWaitPromise, 
           Promise.race([apiPromise, timeoutPromise])
-      ]) as [any, any]; // Casting to handle the race result
+      ]) as [any, RizzGenerationResult];
       
-      setResults(result.replies);
+      setResultData(result);
     } catch (error: any) {
       console.error(error);
       alert(error.message === "Timeout: AI is taking too long." 
@@ -117,7 +116,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   };
 
   const handleTryAgain = () => {
-      setResults(null);
+      setResultData(null);
       // Revoke pass when starting over
       if (oneTimePass) onConsumeOneTimePass(); 
   };
@@ -144,6 +143,18 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   };
 
   const isGoldStatus = proType === 'subscription' || (isPro && proType === 'none');
+
+  const getScoreColor = (score: number) => {
+      if (score < 40) return 'text-red-500';
+      if (score < 70) return 'text-yellow-400';
+      return 'text-green-400';
+  };
+  
+  const getScoreGradient = (score: number) => {
+      if (score < 40) return 'from-red-500 to-orange-600';
+      if (score < 70) return 'from-yellow-400 to-orange-500';
+      return 'from-green-400 to-emerald-500';
+  };
 
   return (
     <div className="h-full w-full flex flex-col p-6 max-w-md mx-auto relative overflow-hidden bg-slate-900">
@@ -207,7 +218,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             <button onClick={handleBack} className="text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition-colors">{t.change_partner}</button>
          </div>
 
-        {!results && (
+        {!resultData && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="text-center"><h2 className="text-2xl font-bold text-white">{t.upload_title}</h2><p className="text-slate-400 text-sm mt-1">{t.upload_desc}</p></div>
             <div onClick={() => fileInputRef.current?.click()} className={`relative border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer group ${selectedImage ? 'border-purple-500 bg-purple-500/10' : 'border-slate-600 hover:border-slate-500 hover:bg-slate-800/50'}`}>
@@ -222,19 +233,45 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
           </div>
         )}
 
-        {results && (
+        {resultData && (
             <div className="space-y-6 animate-in slide-in-from-bottom-10 duration-500">
+                
+                {/* RIZZ SCORE & ROAST HEADER - NEW FEATURE */}
+                <div className="bg-slate-800/50 rounded-2xl border border-white/10 p-5 relative overflow-hidden">
+                    <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${getScoreGradient(resultData.rizzScore)}`}></div>
+                    <div className="flex items-center gap-4">
+                        <div className="relative w-20 h-20 flex items-center justify-center">
+                            {/* Circular Background */}
+                            <svg className="w-full h-full transform -rotate-90">
+                                <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-700" />
+                                <circle 
+                                    cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                    className={getScoreColor(resultData.rizzScore)}
+                                    strokeDasharray={226}
+                                    strokeDashoffset={226 - (226 * resultData.rizzScore) / 100}
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                            <span className="absolute text-2xl font-black text-white">{resultData.rizzScore}</span>
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Flame className={`w-4 h-4 ${getScoreColor(resultData.rizzScore)}`} />
+                                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t.rizz_score}</h3>
+                            </div>
+                            <p className="text-sm font-medium text-white italic leading-tight">
+                                "{resultData.roast}"
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="text-center">
                   <h2 className="text-2xl font-black bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">{t.results_title}</h2>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Algorithm Precision Optimized</p>
                 </div>
+                
                 <div className="space-y-4">
-                    {results.map((res, idx) => {
-                        // UNLOCK LOGIC:
-                        // If isPro is true (due to review mode OR subscription OR onetime pass), nothing is locked.
-                        // Wait, logic check: 'isPro' prop passed from App.tsx includes subscription & review mode.
-                        // 'oneTimePass' is passed separately.
-                        // We need to combine them to check if the user has access.
+                    {resultData.replies.map((res, idx) => {
                         const hasAccess = isPro || oneTimePass;
                         const isLocked = !hasAccess && idx === 2;
                         

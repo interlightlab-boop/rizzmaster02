@@ -8,13 +8,21 @@ declare const process: { env: { API_KEY: string } };
 const RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
   properties: {
+    rizzScore: {
+      type: Type.INTEGER,
+      description: "A score from 0 to 100 indicating how well the conversation is going for the user. 0 = Disaster, 100 = Soulmates.",
+    },
+    roast: {
+      type: Type.STRING,
+      description: "A short, witty, slightly savage 1-sentence observation about the screenshot context in the User's UI language.",
+    },
     replies: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
           tone: { type: Type.STRING, description: "The tone of the reply (e.g., Witty, Sweet, Chill) in the User's UI language." },
-          text: { type: Type.STRING, description: "The actual reply text suggestions in the PARTNER'S language. MUST be detailed, engaging, and longer than generic AI responses." },
+          text: { type: Type.STRING, description: "The actual reply text suggestions in the PARTNER'S language. MUST be detailed, engaging, and longer than generic AI responses (2-4 sentences)." },
           translation: { type: Type.STRING, description: "Translation of the reply text into the User's UI language. NULL if languages match." },
           explanation: { type: Type.STRING, description: "Psychological explanation strictly in the User's UI language. NEVER use the partner's language here." },
         },
@@ -22,13 +30,12 @@ const RESPONSE_SCHEMA: Schema = {
       },
     },
   },
-  required: ["replies"],
+  required: ["rizzScore", "roast", "replies"],
 };
 
-// Helper to clean Markdown code blocks if the Lite model adds them
+// Helper to clean Markdown code blocks
 const cleanJson = (text: string): string => {
   let cleaned = text.trim();
-  // Remove ```json and ``` wrap if present
   if (cleaned.startsWith('```json')) {
     cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (cleaned.startsWith('```')) {
@@ -45,14 +52,12 @@ export const generateRizzSuggestions = async (
   language: Language
 ): Promise<RizzGenerationResult> => {
   try {
-    // Safety check for API Key
     if (!process.env.API_KEY) {
         throw new Error("API Key is missing. Check your .env file or build configuration.");
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Explicitly map language codes to full English names for the prompt
     const langMap: Record<string, string> = {
         en: "English", ko: "Korean", ja: "Japanese", fr: "French", 
         es: "Spanish", pt: "Portuguese", zh: "Chinese", ru: "Russian"
@@ -76,13 +81,13 @@ export const generateRizzSuggestions = async (
 
     if (partner.language === 'ko') {
         if (partner.politeness === 'Casual') {
-            politenessInstruction = "CRITICAL: You MUST use 반말 (Banmal/Casual speech). Do NOT use honorifics endings like '요' (yo) or '니다' (nida). Talk like a close friend.";
+            politenessInstruction = "CRITICAL: You MUST use 반말 (Banmal/Casual speech) ONLY. Talk like a close friend. Never use '요' or '니다'.";
         } else if (partner.politeness === 'Polite') {
-            politenessInstruction = "CRITICAL: You MUST use 존댓말 (Jondaemal/Polite speech). Be respectful and use '요' or '니다'.";
+            politenessInstruction = "CRITICAL: You MUST use 존댓말 (Jondaemal/Polite speech). Be respectful.";
         }
     } else if (partner.language === 'ja') {
         if (partner.politeness === 'Casual') {
-            politenessInstruction = "CRITICAL: You MUST use Tameguchi (タメ口/Casual). Do NOT use Desu/Masu forms.";
+            politenessInstruction = "CRITICAL: You MUST use Tameguchi (タメ口/Casual). Do NOT use Desu/Masu.";
         } else if (partner.politeness === 'Polite') {
             politenessInstruction = "CRITICAL: You MUST use Keigo/Desu/Masu (Polite form).";
         }
@@ -90,64 +95,62 @@ export const generateRizzSuggestions = async (
 
     // --- ENHANCED PROMPT LOGIC ---
     const prompt = `
-      You are a world-class Dating Coach and Psychology Expert specializing in behavioral analysis, evolutionary psychology, and MBTI dynamics.
+      You are a world-class Dating Coach, Stand-up Comedian, and Psychology Expert (specializing in MBTI dynamics).
       
       **TASK:**
-      Analyze the attached chat screenshot and generate 3 distinct replies.
-      You MUST roleplay as the User (Sender) and carefully target the Partner (Recipient) by synthesizing ALL provided profile data.
+      Analyze the chat screenshot and generate 3 HIGH-QUALITY, UNIQUE replies.
+      
+      **THE GOAL:** 
+      Stop the user from being "boring". The replies must be "High Rizz" - charismatic, unpredictable, and engaging.
 
-      **CRITICAL INSTRUCTION ON LENGTH & QUALITY:**
-      The user explicitly wants **rich, detailed, and high-quality responses**. 
-      - **AVOID** generic, short, or robotic answers (e.g., "That's cool").
-      - **DO** elaborate, add wit, use emojis appropriately, and make the conversation engaging.
-      - Each reply should feel like a "Masterpiece" of social engineering.
+      **1. THE USER (SENDER):**
+      - Gender: ${user.gender}, Age: ${user.age}, MBTI: ${user.mbti}
 
-      **1. THE SENDER (USER PROFILE):**
-      - Gender: ${user.gender}
-      - Age: ${user.age}
-      - MBTI: ${user.mbti}
-      *Constraint*: The replies MUST sound authentic to a ${user.gender} aged ${user.age} with ${user.mbti} personality.
+      **2. THE PARTNER (RECIPIENT):**
+      - Name: ${partner.name}, Gender: ${partner.gender}, MBTI: ${partner.mbti}
+      - Relation: ${partner.relation}, Goal: ${partner.goal}, Vibe: ${partner.vibe}
+      - Context: "${partner.context}"
 
-      **2. THE RECIPIENT (PARTNER PROFILE):**
-      - Name: ${partner.name}
-      - Gender: ${partner.gender}
-      - Age: ${partner.age ? partner.age : "Unknown"}
-      - MBTI: ${partner.mbti}
-      - Relationship: ${partner.relation}
-      - Goal: ${partner.goal}
-      - Desired Vibe: ${partner.vibe}
-      - Context Hints: "${partner.context}"
+      **3. CRITICAL STYLE RULES (STRICTLY ENFORCE):**
+      - **NO BORING OPENERS:** BANNED words: "Hey", "Hi", "Hello", "How are you", "Nice photo".
+      - **LENGTH:** Replies must be **2-4 sentences**. They need substance and depth.
+      - **SPECIFICITY:** You MUST reference a visual detail from the photo (e.g., "That sushi looks expensive," "Is that a cat in the background?").
+      - **HOOKS:** End with a question, a challenge, or a playful assumption. Don't just make a statement.
+      - **EMOJIS:** Use 1-2 relevant emojis to set the tone.
 
-      **3. LANGUAGE RULES (CRITICAL):**
-      A. **REPLY TEXT ('text' field)**: Must be in **${partnerLangName}** (${partner.language}). This is what the user sends to the partner.
-         - **STRICT PROHIBITION**: NEVER mention "MBTI", personality types (e.g. "INTJ"), or psychological terms in this text. The reply must sound 100% natural.
-      B. **EXPLANATION ('explanation' field)**: Must be in **${userLangName}** (${language}). You are explaining the strategy TO THE USER.
+      **4. LANGUAGE RULES:**
+      A. **REPLY TEXT**: Must be in **${partnerLangName}** (${partner.language}). Natural, native-speaker level.
+      B. **EXPLANATION**: Must be in **${userLangName}** (${language}).
       ${translationInstruction}
       D. **POLITENESS**: ${politenessInstruction}
+      E. **ROAST**: Must be in **${userLangName}**. Be savage and funny about their chat skills or the situation.
 
-      **4. GENERATION STRATEGY (The 3 Replies):**
+      **5. GENERATION STRATEGY:**
       
-      **Reply 1 (Safe & Steady):** 
-      - **Length**: 3-4 full sentences.
-      - Strategy: Low risk but highly engaging. Validate their last message and pivot to a new topic or question.
+      **Reply 1 (The Safe Bet):** 
+      - A solid, reliable text. Validates their last message and pivots to a new topic based on the image. Safe but effective.
       
-      **Reply 2 (Playful/Witty):** 
-      - **Length**: 3-4 full sentences.
-      - Strategy: Show distinct personality. Use the selected Vibe (${partner.vibe}) strongly. Be creative, teasing, or charming.
-
-      **Reply 3 (👑 THE MASTERPIECE):**
-      - **CRITICAL INSTRUCTION**: This reply MUST be SIGNIFICANTLY longer and higher quality.
-      - **Length**: 5-8 sentences (Target 80-120 words). 
-      - **Synthesis**: Explicitly combine User's ${user.mbti} strength with Partner's ${partner.mbti} weakness.
-      - **Goal**: Laser-focus on achieving '${partner.goal}'.
-      - **Tone Label**: Mark as "🔥 MASTERPIECE".
+      **Reply 2 (The Vibe Match - ${partner.vibe}):** 
+      - If 'Witty': Playful teasing, "Push-Pull" technique.
+      - If 'Sweet': Genuine compliment + detailed question.
+      - If 'Bold': Direct intent, confidence, high risk.
       
-      Output exactly 3 replies in valid JSON format matching the schema.
+      **Reply 3 (👑 THE MASTERPIECE - THE "GAME CHANGER"):** 
+      - **THIS MUST BE THE BEST REPLY.**
+      - **Psychology:** Use "Cold Reading" (make a specific guess about them based on the image) or "Playful Accusation" (tease them about something in the photo).
+      - **Structure:** Observation + High-Value Opinion + Open-ended Loop.
+      - **Example Idea:** "You look like trouble. 😈 I bet you stole that [item in photo]." OR "I was going to say [something], but seeing this photo, I think you're actually [personality trait]."
+      - **Requirement:** It must be longer, more complex, and psychologically calibrated to their MBTI (${partner.mbti}). It should make the partner pause and laugh/think.
+      
+      **Rizz Score (0-100):**
+      - Rate the current conversation situation based on the screenshot. 0-30: Ghosting/Dry. 70-100: High Interest.
+      
+      Output valid JSON only.
     `;
 
-    // 🚨 [사장님 요청] GEMINI 2.0 FLASH LITE (가장 저렴한 모델) 사용
+    // 🚨 [UPGRADED] Using Gemini 2.0 Flash (Standard) for higher intelligence than Lite
     const result = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite-preview-02-05", 
+      model: "gemini-2.0-flash", 
       contents: {
         role: "user",
         parts: [
@@ -158,7 +161,9 @@ export const generateRizzSuggestions = async (
       config: {
         responseMimeType: "application/json",
         responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.9, // Increased to 0.9 for maximum creativity and flair
+        temperature: 1.0, // High creativity for "Masterpiece"
+        topP: 0.95,
+        topK: 40,
       },
     });
 
@@ -172,7 +177,7 @@ export const generateRizzSuggestions = async (
             const cleanedText = cleanJson(result.text);
             return JSON.parse(cleanedText) as RizzGenerationResult;
         } catch (e) {
-            console.error("JSON Parse Error on Lite Model:", e);
+            console.error("JSON Parse Error:", e);
             console.log("Raw Text:", result.text);
             throw new Error("AI analysis failed to format the response. Please try again.");
         }
