@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UserProfile, PartnerProfile, RizzGenerationResult, Language } from "../types";
 
@@ -43,6 +42,16 @@ const cleanJson = (text: string): string => {
   }
   return cleaned;
 };
+
+// 🚨 PRIORITY QUEUE FOR MODELS (Fallback System)
+// 1. Gemini 2.0 Flash Lite (Cost King: $0.10/$0.40) - Requested as "2.5 Flash Lite"
+// 2. Gemini 2.0 Flash (Smart Backup)
+// 3. Gemini 1.5 Flash (Reliable Old Faithful)
+const MODELS_TO_TRY = [
+    "gemini-2.0-flash-lite-preview-02-05", 
+    "gemini-2.0-flash", 
+    "gemini-1.5-flash"
+];
 
 export const generateRizzSuggestions = async (
   user: UserProfile,
@@ -148,45 +157,60 @@ export const generateRizzSuggestions = async (
       Output valid JSON only.
     `;
 
-    // 🚨 [UPGRADED] Using Gemini 2.0 Flash (Standard) for higher intelligence than Lite
-    const result = await ai.models.generateContent({
-      model: "gemini-2.0-flash", 
-      contents: {
-        role: "user",
-        parts: [
-            { text: prompt },
-            { inlineData: { mimeType: mimeType, data: imageBase64 } },
-        ],
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 1.0, // High creativity for "Masterpiece"
-        topP: 0.95,
-        topK: 40,
-      },
-    });
+    // 🚨 ROBUST FALLBACK LOOP
+    let lastError = null;
 
-    const usage = result.usageMetadata;
-    if (usage) {
-        console.log(`Tokens - Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}`);
-    }
-
-    if (result.text) {
+    for (const modelName of MODELS_TO_TRY) {
         try {
-            const cleanedText = cleanJson(result.text);
-            return JSON.parse(cleanedText) as RizzGenerationResult;
-        } catch (e) {
-            console.error("JSON Parse Error:", e);
-            console.log("Raw Text:", result.text);
-            throw new Error("AI analysis failed to format the response. Please try again.");
+            // console.log(`Attempting generation with model: ${modelName}`);
+            
+            const result = await ai.models.generateContent({
+              model: modelName, 
+              contents: {
+                role: "user",
+                parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: mimeType, data: imageBase64 } },
+                ],
+              },
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: RESPONSE_SCHEMA,
+                temperature: 1.0, 
+                topP: 0.95,
+                topK: 40,
+              },
+            });
+
+            if (result.text) {
+                try {
+                    const cleanedText = cleanJson(result.text);
+                    return JSON.parse(cleanedText) as RizzGenerationResult;
+                } catch (e) {
+                    // JSON parsing failed, treat as error to trigger fallback
+                    console.warn(`JSON Parse failed on ${modelName}`, e);
+                    lastError = e;
+                    continue; 
+                }
+            }
+        } catch (error: any) {
+            console.warn(`Model ${modelName} failed with error:`, error.message || error);
+            lastError = error;
+            
+            // Add a tiny delay before retrying to let the API breathe
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Continue to the next model in the list...
+            continue;
         }
     }
     
-    throw new Error("No response generated from AI.");
+    // If we get here, ALL models failed.
+    console.error("All AI models failed to generate response.");
+    throw lastError || new Error("Service busy. Please try again.");
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini Service Error:", error);
     throw error;
   }
 };
