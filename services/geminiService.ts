@@ -1,20 +1,21 @@
 
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, PartnerProfile, RizzGenerationResult, Language } from "../types";
 
 // Declare process for TS since it is injected by Vite
 declare const process: { env: { API_KEY: string } };
 
-const RESPONSE_SCHEMA: Schema = {
+// Define schema as a plain object per SDK guidelines
+const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     rizzScore: {
       type: Type.INTEGER,
-      description: "A score from 0 to 100 indicating how well the conversation is going for the user. 0 = Disaster, 100 = Soulmates.",
+      description: "A score from 0 to 100 indicating how well the conversation is going. 0 = Disaster, 100 = Soulmates.",
     },
     roast: {
       type: Type.STRING,
-      description: "A short, witty, slightly savage 1-sentence observation about the screenshot context in the User's UI language.",
+      description: "A short, witty, slightly savage 1-sentence observation about the situation in the User's UI language.",
     },
     replies: {
       type: Type.ARRAY,
@@ -23,8 +24,8 @@ const RESPONSE_SCHEMA: Schema = {
         properties: {
           tone: { type: Type.STRING, description: "The tone of the reply (e.g., Witty, Sweet, Chill) in the User's UI language." },
           text: { type: Type.STRING, description: "The actual reply text suggestions. Must be long, detailed, and engaging. Reply 3 must be 5+ sentences." },
-          translation: { type: Type.STRING, description: "MANDATORY if languages differ: Translate the reply 'text' into the User's UI language. If languages match, return NULL." },
-          explanation: { type: Type.STRING, description: "Psychological explanation strictly in the User's UI language. NEVER use the partner's language here." },
+          translation: { type: Type.STRING, description: "MANDATORY if languages differ: Translate the reply 'text' into the User's UI language. If same, return NULL." },
+          explanation: { type: Type.STRING, description: "Psychological explanation strictly in the User's UI language." },
         },
         required: ["tone", "text", "explanation"],
       },
@@ -33,7 +34,7 @@ const RESPONSE_SCHEMA: Schema = {
   required: ["rizzScore", "roast", "replies"],
 };
 
-// Helper to clean Markdown code blocks
+// Helper to clean Markdown code blocks if any
 const cleanJson = (text: string): string => {
   let cleaned = text.trim();
   if (cleaned.startsWith('```json')) {
@@ -44,9 +45,11 @@ const cleanJson = (text: string): string => {
   return cleaned;
 };
 
-// 🚨 [사장님 확인] 모델 안정화 버전 고정 (Cost & Stability Control)
+// 🚨 [사장님 요청] gemini-2.0-flash-lite-001 모델 고정 및 폴백 설정
 const MODELS_TO_TRY = [
-    "gemini-2.0-flash-lite-001"
+    "gemini-2.0-flash-lite-001",    // 사장님 픽 (최신 라이트 모델)
+    "gemini-flash-lite-latest",     // 안정적인 폴백 (라이트 최신 에일리어스)
+    "gemini-3-flash-preview"        // 차세대 표준 모델 (최종 보루)
 ];
 
 export const generateRizzSuggestions = async (
@@ -72,121 +75,81 @@ export const generateRizzSuggestions = async (
     const partnerLangName = langMap[partner.language] || "English";
     
     const isSameLanguage = language === partner.language;
-    let translationInstruction = "";
-
-    if (isSameLanguage) {
-        translationInstruction = `C. **TRANSLATION**: OMIT THIS FIELD OR RETURN NULL.`;
-    } else {
-        translationInstruction = `C. **TRANSLATION**: 🔴 **STRICTLY REQUIRED**. Translate the 'text' into **${userLangName}**.`;
-    }
+    let translationInstruction = isSameLanguage 
+        ? "C. **TRANSLATION**: OMIT THIS FIELD OR RETURN NULL."
+        : `C. **TRANSLATION**: 🔴 **STRICTLY REQUIRED**. Translate the 'text' into **${userLangName}**.`;
 
     let politenessInstruction = `Politeness level: ${partner.politeness}.`;
-
     if (partner.language === 'ko') {
         if (partner.politeness === 'Casual') {
-            politenessInstruction = "CRITICAL: You MUST use 반말 (Banmal/Casual speech) ONLY. Talk like a close friend. Never use '요' or '니다'.";
+            politenessInstruction = "CRITICAL: You MUST use 반말 (Banmal) ONLY. Talk like a close friend. Never use '요' or '니다'.";
         } else if (partner.politeness === 'Polite') {
-            politenessInstruction = "CRITICAL: You MUST use 존댓말 (Jondaemal/Polite speech).";
+            politenessInstruction = "CRITICAL: You MUST use 존댓말 (Jondaemal).";
         }
     }
 
     const prompt = `
-      You are a world-class Dating Coach, Charisma Expert, and Psychologist.
+      Analyze the chat screenshot and generate 3 HIGH-QUALITY replies.
       
-      **TASK:**
-      Analyze the chat screenshot and generate 3 HIGH-QUALITY, UNIQUE replies.
-      
-      **THE GOAL:** 
-      Make the user stand out as the most interesting person in the partner's inbox.
+      User: ${user.gender}, ${user.age}y/o, MBTI: ${user.mbti}
+      Partner: ${partner.name}, ${partner.gender}, MBTI: ${partner.mbti}
+      Goal: ${partner.goal}, Strategy: ${partner.vibe}, Context: "${partner.context}"
 
-      **1. PROFILES:**
-      - User: ${user.gender}, ${user.age}y/o, MBTI: ${user.mbti}
-      - Partner: ${partner.name}, ${partner.gender}, ${partner.age ? partner.age + 'y/o' : 'unknown age'}, MBTI: ${partner.mbti}
-      - Relationship: ${partner.relation}, Goal: ${partner.goal}, Strategy: ${partner.vibe}
-      - Context: "${partner.context}"
+      **RULES:**
+      1. NEVER mention MBTI types or the word "MBTI" in the reply 'text'.
+      2. VISUAL HOOK: Reference a detail from the image.
+      3. REPLY 3 (👑 MASTERPIECE): 5-8 sentences. Show extreme charisma.
+      4. REPLY TEXT: In ${partnerLangName}. EXPLANATION: In ${userLangName}.
+      5. ${translationInstruction}
+      6. POLITENESS: ${politenessInstruction}
+      7. ROAST: In ${userLangName}.
 
-      **2. 🚫 STRICT NEGATIVE CONSTRAINT (EXTREMELY IMPORTANT):**
-      - **NEVER mention any MBTI types (e.g., "As an INFJ...", "You're such an ENFP") or the word "MBTI" in the actual reply 'text'.**
-      - Use the MBTI knowledge ONLY to influence the tone and psychological strategy behind the scenes.
-      - If you mention MBTI in the reply, the user will be embarrassed. **DO NOT DO IT.**
-
-      **3. STYLE & LENGTH RULES:**
-      - **NO DRY TEXTING:** BANNED: "Hey", "How are you", "What's up".
-      - **VISUAL HOOK:** You MUST reference a specific detail from the image (background, clothing, objects, a specific word they used).
-      - **EMOJIS:** Use 1-2 appropriate emojis max.
-      - **REPLY 1 & 2 LENGTH:** 3-4 sentences. Detailed and conversational.
-      - **REPLY 3 (👑 MASTERPIECE) LENGTH:** **5-8 sentences.** This must be a high-value, "Pro" level response that shows extreme charisma, intelligence, and effort.
-
-      **4. LANGUAGE:**
-      A. **REPLY TEXT**: In **${partnerLangName}**.
-      B. **EXPLANATION**: In **${userLangName}**.
-      ${translationInstruction}
-      D. **POLITENESS**: ${politenessInstruction}
-      E. **ROAST**: In **${userLangName}**.
-
-      **5. GENERATION STRATEGY:**
-      - **Reply 1 (The Safe Multiplier):** A solid pivot. Acknowledge their point, add a unique observation about the photo, and ask a high-value question.
-      - **Reply 2 (The Vibe Specialist - ${partner.vibe}):** Fully lean into the chosen strategy. If 'Witty', use playful teasing. If 'Sweet', use a genuine, detailed observation that makes them feel seen.
-      - **Reply 3 (👑 THE MASTERPIECE - "THE GAME CHANGER"):** 
-        - This is the reason users pay for the app. 
-        - **Psychology:** Use "Cold Reading" (make a bold, playful assumption about their personality based on the photo) + "Future Pacing" (hint at a future activity) + "Open Loop".
-        - **Structure:** Start with something unpredictable -> weave in a compliment that isn't about looks -> end with a magnetic challenge or question.
-        - **Tone:** High confidence, slightly mysterious, and deeply engaging.
-      
-      Output valid JSON only.
+      Output valid JSON matching the schema.
     `;
 
-    let lastError = null;
+    let lastError: any = null;
 
     for (const modelName of MODELS_TO_TRY) {
         try {
-            const result = await ai.models.generateContent({
-              model: modelName, 
+            const response = await ai.models.generateContent({
+              model: modelName,
               contents: {
-                role: "user",
                 parts: [
                     { text: prompt },
-                    { inlineData: { mimeType: mimeType, data: imageBase64 } },
+                    { inlineData: { mimeType, data: imageBase64 } },
                 ],
               },
               config: {
                 responseMimeType: "application/json",
                 responseSchema: RESPONSE_SCHEMA,
-                temperature: 0.9, 
-                topP: 0.95,
+                temperature: 0.85,
               },
             });
 
-            if (result.text) {
-                try {
-                    const cleanedText = cleanJson(result.text);
-                    const parsed = JSON.parse(cleanedText) as RizzGenerationResult;
-                    
-                    // Double check MBTI mention and try to fix if model hallucinated
-                    parsed.replies = parsed.replies.map(r => ({
-                        ...r,
-                        text: r.text.replace(/\b(MBTI|INTJ|INTP|ENTJ|ENTP|INFJ|INFP|ENFJ|ENFP|ISTJ|ISFJ|ESTJ|ESFJ|ISTP|ISFP|ESTP|ESFP)\b/gi, "")
-                    }));
-                    
-                    return parsed;
-                } catch (e) {
-                    console.warn(`JSON Parse failed on ${modelName}`, e);
-                    lastError = e;
-                    continue; 
-                }
+            if (response.text) {
+                const cleanedText = cleanJson(response.text);
+                const parsed = JSON.parse(cleanedText) as RizzGenerationResult;
+                
+                // Safety: remove hallucinations of MBTI labels in the output
+                parsed.replies = parsed.replies.map(r => ({
+                    ...r,
+                    text: r.text.replace(/\b(MBTI|INTJ|INTP|ENTJ|ENTP|INFJ|INFP|ENFJ|ENFP|ISTJ|ISFJ|ESTJ|ESFJ|ISTP|ISFP|ESTP|ESFP)\b/gi, "").trim()
+                }));
+                
+                return parsed;
             }
         } catch (error: any) {
-            console.warn(`Model ${modelName} failed:`, error.message || error);
+            console.warn(`Model ${modelName} failed, trying next... Error:`, error.message || error);
             lastError = error;
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Short delay before fallback
+            await new Promise(resolve => setTimeout(resolve, 300));
             continue;
         }
     }
     
-    const msg = lastError instanceof Error ? lastError.message : String(lastError);
-    throw new Error(`Service busy. Details: ${msg}`);
+    throw lastError || new Error("All models failed to respond.");
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Service Error:", error);
     throw error;
   }

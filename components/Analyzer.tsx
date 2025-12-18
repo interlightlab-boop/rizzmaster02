@@ -33,8 +33,6 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const [resultData, setResultData] = useState<RizzGenerationResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  
-  // State for the Fake Loading Screen (Ad Version)
   const [showFakeLoading, setShowFakeLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,12 +53,12 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
         img.onload = () => {
           const canvas = document.createElement('canvas');
           let w = img.width, h = img.height;
-          const MAX_W = 800;
+          const MAX_W = 1000; // Increased for better AI analysis
           if (w > MAX_W) { h *= MAX_W/w; w = MAX_W; }
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', 0.5);
+          const compressed = canvas.toDataURL('image/jpeg', 0.8);
           setSelectedImage(compressed.split(',')[1]);
           setResultData(null); 
         };
@@ -73,7 +71,6 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const handleAnalyze = async () => {
     if (!selectedImage) return;
 
-    // --- LOADING & REVENUE LOGIC ---
     const isProUser = isPro || oneTimePass;
     const shouldShowAdLoading = !isProUser;
     
@@ -85,18 +82,15 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     setResultData(null); 
     
     try {
-      const waitTime = shouldShowAdLoading ? 6000 : 0; 
+      const adWaitTime = shouldShowAdLoading ? 6000 : 0; 
+      const minWaitPromise = new Promise(resolve => setTimeout(resolve, adWaitTime));
       
-      const minWaitPromise = new Promise(resolve => setTimeout(resolve, waitTime));
-      
-      // TIMEOUT LOGIC: Fail if API takes longer than 40 seconds
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout: AI is taking too long.")), 40000)
+        setTimeout(() => reject(new Error("Network Timeout")), 45000)
       );
 
       const apiPromise = generateRizzSuggestions(user, partner, selectedImage, mimeType, language);
 
-      // Race against timeout
       const [_, result] = await Promise.all([
           minWaitPromise, 
           Promise.race([apiPromise, timeoutPromise])
@@ -104,32 +98,28 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       
       setResultData(result);
     } catch (error: any) {
-      console.error(error);
+      console.error("Analysis Error:", error);
       
-      let errorMsg = "An unexpected error occurred.";
-      if (typeof error === 'string') errorMsg = error;
-      else if (error && error.message) errorMsg = error.message;
-      else if (error) errorMsg = JSON.stringify(error);
-      
+      let errorMsg = error?.message || String(error);
       const lowerMsg = errorMsg.toLowerCase();
       let friendlyMsg = "";
 
       if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("limit") || lowerMsg.includes("busy")) {
           friendlyMsg = language === 'ko' 
-            ? "현재 이용자가 너무 많아 서버가 혼잡합니다. 잠시 후 다시 시도해주세요!" 
-            : "Server traffic is extremely high right now. Please try again in a minute.";
-      } else if (lowerMsg.includes("timeout")) {
+            ? "현재 이용자가 너무 많아 서버가 혼잡합니다. 1~2분 뒤 다시 시도해주세요! (무료 티어 할당량 제한)" 
+            : "Free tier limit reached. Please wait a minute and try again.";
+      } else if (lowerMsg.includes("timeout") || lowerMsg.includes("network")) {
           friendlyMsg = language === 'ko'
-            ? "인터넷 연결이 불안정하여 시간이 초과되었습니다. 다시 시도해주세요."
+            ? "인터넷 연결이 불안정하거나 서버 응답이 지연되고 있습니다. 다시 시도해주세요."
             : "Network timeout. Please check your connection and try again.";
-      } else if (lowerMsg.includes("safety") || lowerMsg.includes("harmful") || lowerMsg.includes("blocked")) {
+      } else if (lowerMsg.includes("safety") || lowerMsg.includes("harmful")) {
           friendlyMsg = language === 'ko'
-            ? "이미지에서 안전하지 않은 콘텐츠가 감지되었습니다. 다른 사진을 사용해주세요."
-            : "Safety filters triggered. Please upload a different screenshot.";
+            ? "안전 가이드라인에 따라 분석할 수 없는 이미지입니다. 다른 사진을 선택해주세요."
+            : "This image cannot be analyzed due to safety filters. Try another.";
       } else {
           friendlyMsg = language === 'ko'
-            ? `오류가 발생했습니다: ${errorMsg}`
-            : `Error: ${errorMsg}`;
+            ? `죄송합니다. 오류가 발생했습니다: ${errorMsg}`
+            : `Something went wrong: ${errorMsg}`;
       }
 
       alert(friendlyMsg);
@@ -139,17 +129,12 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     }
   };
 
-  const handleRetry = () => {
-      // Ad logic is inherently handled inside handleAnalyze.
-      handleAnalyze();
-  };
-
+  const handleRetry = () => handleAnalyze();
   const handleTryAnother = () => {
       setResultData(null);
       setSelectedImage(null);
       if (oneTimePass) onConsumeOneTimePass(); 
   };
-
   const handleBack = () => {
       if (oneTimePass) onConsumeOneTimePass();
       onBack();
@@ -163,22 +148,17 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
 
   const shouldShowTranslation = (res: RizzResponse) => {
       if (language === partner.language) return false;
-      if (!res.translation) return false;
-      if (res.translation.trim() === '') return false;
-      if (res.translation.toLowerCase() === 'null') return false;
-      if (res.translation === res.text) return false;
+      if (!res.translation || res.translation === 'null' || res.translation === res.text) return false;
       return true;
   };
 
   const getScoreColor = (score: number) => {
       if (score < 40) return 'text-red-400';
-      if (score < 70) return 'text-yellow-400';
+      if (score < 75) return 'text-yellow-400';
       return 'text-green-400';
   };
 
-  if (showFakeLoading) {
-      return <InterstitialAd language={language} mode="processing" />;
-  }
+  if (showFakeLoading) return <InterstitialAd language={language} mode="processing" />;
 
   if (isAnalyzing) {
     return (
@@ -192,7 +172,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
          <div className="text-center space-y-2">
              <h2 className="text-xl font-bold text-white animate-pulse">{t.analyzing_btn}</h2>
              <p className="text-sm text-slate-400">
-                {language === 'ko' ? "AI가 대화 흐름을 읽는 중..." : "AI is decoding the subtext..."}
+                {language === 'ko' ? "AI가 대화의 공기를 읽는 중..." : "AI is analyzing the subtext..."}
              </p>
          </div>
       </div>
@@ -203,21 +183,15 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     return (
       <div className="h-full w-full flex flex-col bg-slate-900 animate-in fade-in duration-500 overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-slate-800 sticky top-0 bg-slate-900/95 backdrop-blur-sm z-10">
-          <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800">
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <button onClick={handleBack} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800"><ArrowLeft className="w-6 h-6" /></button>
           <div className="flex items-center gap-2">
-              <button onClick={onGoHome} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800">
-                  <Home className="w-5 h-5" />
-              </button>
-              <button onClick={onOpenSettings} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800">
-                  <Settings className="w-5 h-5" />
-              </button>
+              <button onClick={onGoHome} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800"><Home className="w-5 h-5" /></button>
+              <button onClick={onOpenSettings} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800"><Settings className="w-5 h-5" /></button>
           </div>
         </div>
 
         <div className="p-4 space-y-6 pb-24">
-            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50 text-center space-y-3 relative overflow-hidden">
+            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50 text-center space-y-3 relative overflow-hidden shadow-2xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"></div>
                 <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t.rizz_score}</h2>
                 <div className={`text-6xl font-black ${getScoreColor(resultData.rizzScore)} drop-shadow-2xl`}>{resultData.rizzScore}</div>
@@ -231,7 +205,6 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 {resultData.replies.map((reply, index) => {
                     const isMasterpiece = index === 2; 
                     const isLocked = isMasterpiece && !isPro && !oneTimePass; 
-
                     return (
                         <div key={index} className={`relative group rounded-2xl transition-all duration-300 ${isLocked ? 'bg-slate-900 border border-slate-800 p-1 opacity-90' : isMasterpiece ? 'bg-gradient-to-br from-slate-800 to-slate-900 border border-yellow-500/30 shadow-lg shadow-yellow-900/10' : 'bg-slate-800 border border-slate-700'}`}>
                             {isLocked && (
@@ -273,10 +246,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             
             {showInstallBanner && installPrompt && (
                 <div className="fixed bottom-6 left-4 right-4 z-50 bg-slate-800 border border-purple-500/30 p-4 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-10 flex items-center justify-between">
-                     <div className="flex flex-col">
-                         <span className="font-bold text-white text-sm">{t.install_promo_title}</span>
-                         <span className="text-xs text-slate-400">{t.install_promo_desc}</span>
-                     </div>
+                     <div className="flex flex-col"><span className="font-bold text-white text-sm">{t.install_promo_title}</span><span className="text-xs text-slate-400">{t.install_promo_desc}</span></div>
                      <button onClick={onInstallApp} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-500 transition-colors">Install</button>
                      <button onClick={() => setShowInstallBanner(false)} className="absolute -top-2 -right-2 bg-slate-700 text-slate-400 rounded-full p-1 border border-slate-600"><X className="w-3 h-3" /></button>
                 </div>
