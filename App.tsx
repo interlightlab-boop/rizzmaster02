@@ -75,7 +75,6 @@ const App: React.FC = () => {
     const savedLang = localStorage.getItem(STORAGE_KEY_LANG) as Language;
     const savedUser = localStorage.getItem(STORAGE_KEY_USER);
 
-    // [로직 개선] 저장된 언어가 없으면 브라우저 언어 감지
     if (savedLang) {
       setLanguage(savedLang);
     } else {
@@ -87,6 +86,19 @@ const App: React.FC = () => {
     }
 
     if (savedUser) setUserProfile(JSON.parse(savedUser));
+
+    // ==================================================================================
+    // 💳 [결제 성공 감지 로직] URL 파라미터 체크 (?payment=success)
+    // ==================================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+        // 결제 성공 시 31일간 Pro 권한 부여
+        grantTimeBasedReward('subscription', 31 * 24 * 60 * 60 * 1000);
+        // URL에서 파라미터 제거 (깔끔하게)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        alert(savedLang === 'ko' ? "🎉 프로 구독이 완료되었습니다! 모든 기능을 무제한으로 즐기세요." : "🎉 Pro subscription active! Enjoy unlimited access.");
+    }
+    // ==================================================================================
 
     const hasVisited = localStorage.getItem(STORAGE_KEY_VISITED);
     if (!hasVisited) {
