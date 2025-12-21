@@ -5,7 +5,8 @@ import { AdBanner } from './AdBanner';
 import { TRANSLATIONS } from '../constants/translations';
 import { Language } from '../types';
 
-const RECTANGLE_AD_SLOT_ID = "7011091820"; // 👈 사장님이 주신 코드로 수정 완료
+// 사각 광고(Rectangle)에 최적화된 슬롯 ID (없으면 기본 슬롯 ID 사용)
+const RECTANGLE_AD_SLOT_ID = "7011091820"; 
 
 interface InterstitialAdProps {
   onClose?: () => void;

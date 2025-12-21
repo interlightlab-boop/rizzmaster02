@@ -19,7 +19,7 @@ const FALLBACK_TIPS = [
 ];
 
 export const AdBanner: React.FC<AdBannerProps> = ({ 
-  slotId = "7011091820", // 👈 사장님이 주신 코드로 수정 완료
+  slotId = "7011091820", 
   format = "auto",
   className = "",
   style = {}
@@ -28,7 +28,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const [tipIndex] = useState(Math.floor(Math.random() * FALLBACK_TIPS.length));
   
   const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const isConfigured = ADSENSE_PUBLISHER_ID !== "ca-pub-XXXXXXXXXXXXXXXX";
+  const isConfigured = ADSENSE_PUBLISHER_ID.startsWith("ca-pub-");
 
   useEffect(() => {
     if (!isDev && isConfigured && adRef.current) {
@@ -36,7 +36,7 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         // @ts-ignore
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       } catch (e) {
-        console.warn("AdSense logic pending.");
+        console.warn("AdSense logic pending or error:", e);
       }
     }
   }, [isConfigured]);
@@ -49,19 +49,11 @@ export const AdBanner: React.FC<AdBannerProps> = ({
         className={`w-full relative overflow-hidden flex flex-col items-center ${className}`} 
         style={{ ...style }}
     >
-      {/* 1. 실제 광고 단위 */}
-      <div ref={adRef} className="w-full">
-        <ins
-            className="adsbygoogle"
-            style={{ display: 'block', width: '100%' }}
-            data-ad-client={ADSENSE_PUBLISHER_ID}
-            data-ad-slot={slotId}
-            data-ad-format={format}
-            data-full-width-responsive="true"
-        />
-      </div>
-
-      {/* 2. 광고 미송출 시 정보성 카드 (Fallback) */}
+      {/* 
+         1. 광고 미송출 시 보여줄 정보성 카드 (Fallback UI)
+         - 순서를 위로 올려서 기본적으로 이것이 렌더링되게 함.
+         - CSS로 광고가 'filled' 되면 숨김 처리.
+      */}
       <div className="ad-fallback-ui w-full bg-white/[0.03] border border-white/10 rounded-3xl p-6 transition-all duration-700">
           <div className="flex items-start gap-4">
               <div className="p-3 bg-slate-800 rounded-2xl border border-white/10 shadow-xl shrink-0">
@@ -82,15 +74,48 @@ export const AdBanner: React.FC<AdBannerProps> = ({
           </div>
       </div>
 
+      {/* 
+         2. 실제 광고 단위 
+         - CSS를 통해 광고가 로드되지 않았으면(unfilled) 높이를 0으로 만들거나 숨김.
+      */}
+      <div ref={adRef} className="w-full ad-container">
+        <ins
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%' }}
+            data-ad-client={ADSENSE_PUBLISHER_ID}
+            data-ad-slot={slotId}
+            data-ad-format={format}
+            data-full-width-responsive="true"
+        />
+      </div>
+
       <style>{`
-        /* 광고가 비어있으면 fallback을 보여주고, 있으면 fallback을 숨김 */
-        .adsbygoogle[data-ad-status="filled"] ~ .ad-fallback-ui {
+        /* 
+           핵심 로직:
+           1. 광고가 'filled' 상태가 되면 -> Fallback UI를 숨깁니다.
+           2. 광고가 'unfilled' 상태이거나 로딩 중이면 -> 광고(ins)를 숨기고 Fallback UI를 보여줍니다.
+        */
+        
+        /* 광고가 로드되면 Fallback 숨김 */
+        .ad-container:has(.adsbygoogle[data-ad-status="filled"]) ~ .ad-fallback-ui,
+        .ad-container:has(.adsbygoogle[data-ad-status="filled"]) + .ad-fallback-ui,
+        .ad-fallback-ui:has(+ .ad-container .adsbygoogle[data-ad-status="filled"]) {
             display: none !important;
         }
-        .adsbygoogle[data-ad-status="unfilled"] {
-            display: none !important;
+
+        /* React 구조상 형제 선택자가 까다로울 수 있으므로, .adsbygoogle 자체 스타일링 강화 */
+        .adsbygoogle {
+            background: transparent !important; 
         }
-        .adsbygoogle:empty {
+
+        /* 광고가 채워지지 않았으면 광고 태그 자체를 숨김 (빈 박스 방지) */
+        .adsbygoogle:not([data-ad-status="filled"]) {
+            display: none !important;
+            height: 0 !important;
+        }
+
+        /* 광고가 채워졌을 때만 Fallback을 숨기는 로직 (JS 의존성 줄임) */
+        .w-full:has(.adsbygoogle[data-ad-status="filled"]) .ad-fallback-ui {
             display: none !important;
         }
       `}</style>
