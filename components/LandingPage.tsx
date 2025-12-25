@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   ArrowRight, Sparkles, BrainCircuit, Target, 
@@ -32,9 +31,9 @@ const CONTENT: Record<string, any> = {
     v3_t: "상황별 맞춤 전략",
     v3_d: "단순한 유머부터 진지한 관계 회복까지, 사용자의 목적에 맞는 3가지 톤(Tone)의 답변을 생성합니다.",
 
-    // New Content Section for AdSense Approval (Original Articles)
+    // 아카데미 섹션
     guide_title: "커뮤니케이션 심리학 아카데미",
-    guide_desc: "애드센스 승인을 위해 보강된 전문 정보 섹션입니다. 더 나은 관계를 위한 전문가의 조언을 읽어보세요.",
+    guide_desc: "더 나은 관계를 위한 전문가의 조언과 심리학적 분석을 확인해보세요.",
     
     art1_t: "텍스트 답장 속도의 심리학",
     art1_d: "답장 속도는 관심도의 척도일까요? 심리학 연구에 따르면, 무조건 빠른 답장보다 상대방의 속도에 맞추는 '미러링'이 신뢰 형성에 더 효과적입니다. 불안형 애착 유형은 늦은 답장을 거절로 인식하지만, 회피형 유형은 너무 빠른 답장을 압박으로 느낄 수 있습니다. 상대방의 패턴을 관찰하고 70~80% 수준으로 보조를 맞추는 것이 가장 안정적인 전략입니다. 이는 상대방에게 심리적 동질감을 부여하며 대화의 흐름을 자연스럽게 유지해줍니다.",
@@ -74,7 +73,7 @@ const CONTENT: Record<string, any> = {
     v3_t: "Tailored Strategies",
     v3_d: "From witty banter to sincere conflict resolution, get 3 distinct reply options tailored to your specific relationship goals.",
 
-    // New Content Section for AdSense Approval
+    // Academy Section
     guide_title: "Communication Psychology Academy",
     guide_desc: "Explore our expert-curated articles for high-quality social interaction.",
 
@@ -138,12 +137,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onOpenLegal, 
             </div>
         </header>
 
-        {/* 💡 Ad Slot 1 - Top Position (Content Rich Page) */}
+        {/* 💡 Ad Slot 1 */}
         <div className="px-6 max-w-3xl mx-auto mb-32">
             <AdBanner className="rounded-[32px]" />
         </div>
 
-        {/* 📚 Educational Articles Section (Crucial for AdSense Approval) */}
+        {/* 📚 Educational Articles Section */}
         <section className="relative z-10 px-6 py-24 bg-white/[0.02] border-y border-white/5">
             <div className="max-w-5xl mx-auto space-y-16">
                 <div className="text-center space-y-4">

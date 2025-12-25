@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, PartnerProfile, RizzGenerationResult, Language } from "../types";
 
@@ -45,11 +44,11 @@ const cleanJson = (text: string): string => {
   return cleaned;
 };
 
-// 🚨 [사장님 요청] gemini-2.0-flash-lite-001 모델 고정 및 폴백 설정
+// Model configuration with fallback strategy
 const MODELS_TO_TRY = [
-    "gemini-2.0-flash-lite-001",    // 사장님 픽 (최신 라이트 모델)
-    "gemini-flash-lite-latest",     // 안정적인 폴백 (라이트 최신 에일리어스)
-    "gemini-3-flash-preview"        // 차세대 표준 모델 (최종 보루)
+    "gemini-2.0-flash-lite-001",    // Primary lightweight model
+    "gemini-flash-lite-latest",     // Fallback alias
+    "gemini-3-flash-preview"        // Legacy fallback
 ];
 
 export const generateRizzSuggestions = async (

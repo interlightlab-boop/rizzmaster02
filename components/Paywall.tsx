@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, Zap, Check, Lock, Share2, Flame, ExternalLink } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
@@ -12,7 +11,7 @@ interface PaywallProps {
 }
 
 // ==================================================================================
-// 💰 [사장님 설정 완료] Lemon Squeezy 결제 링크 적용
+// Payment Link Configuration
 // ==================================================================================
 const LEMON_SQUEEZY_LINK: string = "https://mbtirizzcom.lemonsqueezy.com/checkout/buy/8b859b8f-570d-45e9-b33f-d29096a029ab"; 
 // ==================================================================================

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { PartnerProfile, UserProfile, RizzResponse, Language, RizzGenerationResult } from '../types';
 import { TRANSLATIONS } from '../constants/translations';
@@ -36,7 +35,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showFakeLoading, setShowFakeLoading] = useState(false);
   
-  // 첫회 무료 이용권 사용 여부를 결과 렌더링 시점에 기억하기 위한 로컬 상태
+  // Track free pass usage for current session result
   const [wasFreePass, setWasFreePass] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +74,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const handleAnalyze = async () => {
     if (!selectedImage) return;
 
-    // 분석 전에 1회 이용권 사용 여부를 로컬 상태에 저장하고 상위 상태 업데이트
+    // Apply first-time free pass logic
     const currentlyHasFreePass = oneTimePass;
     if (currentlyHasFreePass) {
         setWasFreePass(true);
@@ -85,7 +84,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
     }
 
     const isProUser = isPro; 
-    const shouldShowAdLoading = !isProUser && !currentlyHasFreePass; // 프로도 아니고 무료이용권도 아니면 로딩 광고
+    const shouldShowAdLoading = !isProUser && !currentlyHasFreePass; 
     
     if (shouldShowAdLoading) {
         setShowFakeLoading(true);
@@ -192,7 +191,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             <div className="space-y-4">
                 {resultData.replies.map((reply, index) => {
                     const isMasterpiece = index === 2; 
-                    // 👑 사장님 요청: 마스터피스는 Pro 사용자 또는 첫 회 무료 이용권 사용자(wasFreePass)에게 공개
+                    // Logic: Unlock masterpiece for Pro users or during the first free pass
                     const isLocked = isMasterpiece && !isPro && !wasFreePass; 
                     
                     return (
@@ -223,7 +222,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                 })}
             </div>
 
-            {/* 🔥 애드센스 승인을 위한 안전한 광고 배치 (충분한 콘텐츠 하단) */}
+            {/* Ad Placement */}
             <div className="pt-4 pb-4">
                 <AdBanner className="rounded-[32px]" />
             </div>

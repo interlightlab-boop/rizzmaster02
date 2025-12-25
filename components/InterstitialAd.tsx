@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrainCircuit, Sparkles, Lightbulb } from 'lucide-react';
 import { TRANSLATIONS } from '../constants/translations';
@@ -12,10 +11,8 @@ interface InterstitialAdProps {
 }
 
 /**
- * 🚨 구글 애드센스 정책 준수 알림:
- * '게시자 콘텐츠가 없는 화면' 위반을 방지하기 위해 이 컴포넌트(로딩/중간 화면)에서는
- * 어떠한 광고 유닛도 로드하지 않습니다. 대신 유용한 심리학 팁을 노출하여 
- * 사용자에게 가치 있는 콘텐츠 대기 시간을 제공합니다.
+ * Note: No external ad units are loaded in this interstitial view to maintain optimal user experience
+ * during short waiting periods. Informative content is displayed instead.
  */
 
 export const InterstitialAd: React.FC<InterstitialAdProps> = ({ onClose, onReward, language, mode }) => {
