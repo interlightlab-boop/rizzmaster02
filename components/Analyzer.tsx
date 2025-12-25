@@ -5,6 +5,7 @@ import { TRANSLATIONS } from '../constants/translations';
 import { generateRizzSuggestions } from '../services/geminiService';
 import { Button } from './Button';
 import { InterstitialAd } from './InterstitialAd';
+import { AdBanner } from './AdBanner';
 import { ArrowLeft, Image as ImageIcon, Copy, CheckCircle2, Settings, Globe, Sparkles, Home, Lock, Download, X, Flame, RotateCcw } from 'lucide-react';
 
 interface AnalyzerProps {
@@ -34,6 +35,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showFakeLoading, setShowFakeLoading] = useState(false);
+  
+  // 첫회 무료 이용권 사용 여부를 결과 렌더링 시점에 기억하기 위한 로컬 상태
+  const [wasFreePass, setWasFreePass] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +57,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
         img.onload = () => {
           const canvas = document.createElement('canvas');
           let w = img.width, h = img.height;
-          const MAX_W = 1000; // Increased for better AI analysis
+          const MAX_W = 1000;
           if (w > MAX_W) { h *= MAX_W/w; w = MAX_W; }
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
@@ -71,8 +75,17 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const handleAnalyze = async () => {
     if (!selectedImage) return;
 
-    const isProUser = isPro || oneTimePass;
-    const shouldShowAdLoading = !isProUser;
+    // 분석 전에 1회 이용권 사용 여부를 로컬 상태에 저장하고 상위 상태 업데이트
+    const currentlyHasFreePass = oneTimePass;
+    if (currentlyHasFreePass) {
+        setWasFreePass(true);
+        onConsumeOneTimePass();
+    } else {
+        setWasFreePass(false);
+    }
+
+    const isProUser = isPro; 
+    const shouldShowAdLoading = !isProUser && !currentlyHasFreePass; // 프로도 아니고 무료이용권도 아니면 로딩 광고
     
     if (shouldShowAdLoading) {
         setShowFakeLoading(true);
@@ -99,30 +112,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
       setResultData(result);
     } catch (error: any) {
       console.error("Analysis Error:", error);
-      
-      let errorMsg = error?.message || String(error);
-      const lowerMsg = errorMsg.toLowerCase();
-      let friendlyMsg = "";
-
-      if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("limit") || lowerMsg.includes("busy")) {
-          friendlyMsg = language === 'ko' 
-            ? "현재 이용자가 너무 많아 서버가 혼잡합니다. 1~2분 뒤 다시 시도해주세요! (무료 티어 할당량 제한)" 
-            : "Free tier limit reached. Please wait a minute and try again.";
-      } else if (lowerMsg.includes("timeout") || lowerMsg.includes("network")) {
-          friendlyMsg = language === 'ko'
-            ? "인터넷 연결이 불안정하거나 서버 응답이 지연되고 있습니다. 다시 시도해주세요."
-            : "Network timeout. Please check your connection and try again.";
-      } else if (lowerMsg.includes("safety") || lowerMsg.includes("harmful")) {
-          friendlyMsg = language === 'ko'
-            ? "안전 가이드라인에 따라 분석할 수 없는 이미지입니다. 다른 사진을 선택해주세요."
-            : "This image cannot be analyzed due to safety filters. Try another.";
-      } else {
-          friendlyMsg = language === 'ko'
-            ? `죄송합니다. 오류가 발생했습니다: ${errorMsg}`
-            : `Something went wrong: ${errorMsg}`;
-      }
-
-      alert(friendlyMsg);
+      alert(language === 'ko' ? "오류가 발생했습니다. 다시 시도해주세요." : "An error occurred. Please try again.");
     } finally { 
         setShowFakeLoading(false);
         setIsAnalyzing(false); 
@@ -133,10 +123,8 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   const handleTryAnother = () => {
       setResultData(null);
       setSelectedImage(null);
-      if (oneTimePass) onConsumeOneTimePass(); 
   };
   const handleBack = () => {
-      if (oneTimePass) onConsumeOneTimePass();
       onBack();
   };
 
@@ -204,7 +192,9 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             <div className="space-y-4">
                 {resultData.replies.map((reply, index) => {
                     const isMasterpiece = index === 2; 
-                    const isLocked = isMasterpiece && !isPro && !oneTimePass; 
+                    // 👑 사장님 요청: 마스터피스는 Pro 사용자 또는 첫 회 무료 이용권 사용자(wasFreePass)에게 공개
+                    const isLocked = isMasterpiece && !isPro && !wasFreePass; 
+                    
                     return (
                         <div key={index} className={`relative group rounded-2xl transition-all duration-300 ${isLocked ? 'bg-slate-900 border border-slate-800 p-1 opacity-90' : isMasterpiece ? 'bg-gradient-to-br from-slate-800 to-slate-900 border border-yellow-500/30 shadow-lg shadow-yellow-900/10' : 'bg-slate-800 border border-slate-700'}`}>
                             {isLocked && (
@@ -224,13 +214,18 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
                                     {shouldShowTranslation(reply) && <div className="text-sm text-slate-500 border-l-2 border-slate-700 pl-3 italic">{reply.translation}</div>}
                                 </div>
                                 <div className="bg-black/20 p-3 rounded-xl border border-white/5">
-                                    <p className="text-xs text-slate-400"><span className="font-bold text-slate-500 uppercase mr-1">Why:</span>{reply.explanation}</p>
+                                    <p className="text-xs text-slate-400 font-medium"><span className="font-bold text-slate-500 uppercase mr-1">Rationale:</span>{reply.explanation}</p>
                                 </div>
                                 <button onClick={() => handleCopy(reply.text, index)} className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${copiedIndex === index ? 'bg-green-500 text-white' : isMasterpiece ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20' : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white'}`}>{copiedIndex === index ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copiedIndex === index ? t.copy_success : "Copy Text"}</button>
                             </div>
                         </div>
                     );
                 })}
+            </div>
+
+            {/* 🔥 애드센스 승인을 위한 안전한 광고 배치 (충분한 콘텐츠 하단) */}
+            <div className="pt-4 pb-4">
+                <AdBanner className="rounded-[32px]" />
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
